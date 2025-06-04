@@ -10,6 +10,14 @@ class NeuronModelsManager:
         self.current_model_name = None
         self.ignore_param_changes = False  # Flag to prevent preset updates during preset loading
     
+    def get_neuron_model(self):
+        """
+        Get the currently selected neuron model configuration.
+          Returns:
+            dict: Current neuron model configuration including model_key and parameters
+        """
+        return self.get_neuron_model_config()
+
     def connect_signals(self):
         self.main_window.neuron_model_combo.currentIndexChanged.connect(self.update_neuron_param_form_and_presets)
         self.main_window.neuron_model_preset_combo.currentIndexChanged.connect(self.apply_neuron_model_preset)
@@ -18,6 +26,7 @@ class NeuronModelsManager:
         self.main_window.sim_params_manager.param_changed.connect(self.on_param_changed)
         self.main_window.noise_options_manager.param_changed.connect(self.on_param_changed)
         self.main_window.network_options_manager.param_changed.connect(self.on_param_changed)
+        self.main_window.advanced_network_manager.param_changed.connect(self.on_param_changed)
 
     def on_param_changed(self):
         """Called when any parameter is changed by the user"""
@@ -52,10 +61,14 @@ class NeuronModelsManager:
             for preset_key, preset in MODEL_PRESETS[model_key].items():
                 if preset_key not in ["none", "custom"]:  # Skip the special presets
                     self.main_window.neuron_model_preset_combo.addItem(preset["display_name"], userData=preset_key)
-        self.main_window.neuron_model_preset_combo.blockSignals(False)
-
+        self.main_window.neuron_model_preset_combo.blockSignals(False)        
+        
         # Ensure LIF threshold/reset visibility is updated on model change
         self.main_window.sim_params_manager.update_lif_params_visibility(model_key)
+        
+        # Connect LIF parameter signals if they were just created
+        if model_key == "lif":
+            self.main_window.sim_params_manager.connect_lif_signals()
 
     def apply_neuron_model_preset(self, index):
         if not (
@@ -78,7 +91,8 @@ class NeuronModelsManager:
             model_config = NEURON_MODELS_CONFIG.get(current_model_key)
             if model_config and "presets" in model_config:
                 preset = model_config["presets"].get(preset_key)
-                if preset and "values" in preset:                    # Apply model-specific parameters
+                if preset and "values" in preset:                    
+                    # Apply model-specific parameters
                     if current_model_key in self.main_window.neuron_model_forms:
                         param_widgets = self.main_window.neuron_model_forms[current_model_key]["params"]
                         for param_name, value in preset["values"].items():
@@ -118,7 +132,7 @@ class NeuronModelsManager:
                 break
         
         if not current_model_key:
-             # Fallback or error handling
+            # Fallback or error handling
             combo_idx = self.main_window.neuron_model_combo.currentIndex()
             ordered_keys = list(NEURON_MODELS_CONFIG.keys())
             if 0 <= combo_idx < len(ordered_keys):
@@ -163,7 +177,8 @@ class NeuronModelsManager:
                         value = text
                 elif isinstance(widget, QLineEdit):
                     text = widget.text().strip()
-                    if text:  # Only include non-empty values
+                    if text:  
+                        # Only include non-empty values
                         # Try to convert numeric strings to numbers
                         try:
                             value = float(text)
@@ -176,7 +191,8 @@ class NeuronModelsManager:
 
         # Save current preset if one is selected
         preset_index = self.main_window.neuron_model_preset_combo.currentIndex()
-        if preset_index > 0:  # 0 is "Select a preset..."
+        if preset_index > 0:  
+            # 0 is "Select a preset..."
             preset_name = self.main_window.neuron_model_preset_combo.currentText()
             config["preset"] = preset_name
 

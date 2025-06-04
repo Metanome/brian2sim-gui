@@ -7,8 +7,8 @@ class SimParamsManager(QObject):
     def __init__(self, main_window):
         super().__init__()
         self.main_window = main_window
-        self.sim_params_ui_module = None # To be set after import
-
+        self.sim_params_ui_module = None
+        
     def connect_signals(self):
         # Connect value changed signals for all parameters
         params = [
@@ -16,13 +16,20 @@ class SimParamsManager(QObject):
             self.main_window.input_current_input,
             self.main_window.num_neurons_input,
             self.main_window.current_start_input,
-            self.main_window.current_duration_input,
-            self.main_window.lif_threshold_input,
-            self.main_window.lif_reset_input
+            self.main_window.current_duration_input
+            # Note: LIF parameters are connected separately via connect_lif_signals()
+            # since they are created dynamically
         ]
         for param in params:
             if param is not None:  # Some params might be None if not created yet
                 param.valueChanged.connect(self.on_param_changed)
+    
+    def connect_lif_signals(self):
+        """Connect signals for dynamically created LIF parameters"""
+        if hasattr(self.main_window, 'lif_threshold_input') and self.main_window.lif_threshold_input is not None:
+            self.main_window.lif_threshold_input.valueChanged.connect(self.on_param_changed)
+        if hasattr(self.main_window, 'lif_reset_input') and self.main_window.lif_reset_input is not None:
+            self.main_window.lif_reset_input.valueChanged.connect(self.on_param_changed)
 
     def on_param_changed(self):
         """Called when any simulation parameter changes"""
@@ -102,3 +109,7 @@ class SimParamsManager(QObject):
             self.main_window.lif_threshold_input.setValue(preset_values["lif_threshold"])
         if "lif_reset" in preset_values and self.main_window.lif_reset_input:
             self.main_window.lif_reset_input.setValue(preset_values["lif_reset"])
+
+    def get_sim_params_config(self):
+        """Get simulation parameters configuration data for config manager."""
+        return self.get_sim_params()

@@ -242,3 +242,7 @@ class NetworkOptionsManager(QObject):
                     self.main_window.sw_nearest_neighbors_input.setValue(preset_values["topology_k"])
                 if "topology_p_rewire" in preset_values and self.main_window.sw_rewiring_probability_input:
                     self.main_window.sw_rewiring_probability_input.setValue(preset_values["topology_p_rewire"])
+
+    def get_network_options_config(self):
+        """Get network options configuration data for config manager."""
+        return self.get_network_options()

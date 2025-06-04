@@ -169,6 +169,10 @@ def update_lif_parameters_visibility_in_sim_params(main_window, current_model_ke
         # Store the values
         main_window.lif_threshold_value = main_window.lif_threshold_input.value()
         main_window.lif_reset_value = main_window.lif_reset_input.value()
+        
+        # Connect signals for the newly created LIF parameters
+        if hasattr(main_window, 'sim_params_manager') and main_window.sim_params_manager:
+            main_window.sim_params_manager.connect_lif_signals()
     
     # Request a layout update
     main_window.sim_params_layout.activate()

@@ -5,6 +5,45 @@ class ConfigManager:
     def __init__(self, main_window):
         self.main_window = main_window
 
+    def validate_all_parameters(self):
+        """
+        Validate all current parameters in the GUI.
+        
+        Returns:
+            tuple: (is_valid: bool, error_message: str)
+        """
+        # Get all current configuration from the GUI
+        config_data = self._get_current_config()
+        
+        # Use the existing validate_parameters method
+        return self.validate_parameters(config_data)
+    
+    def _get_current_config(self):
+        """Get current configuration from all GUI components."""
+        config_data = {}
+        
+        # Get neuron model settings
+        if hasattr(self.main_window, 'neuron_models_manager'):
+            config_data["neuron_model"] = self.main_window.neuron_models_manager.get_neuron_model_config()
+        
+        # Get simulation parameters  
+        if hasattr(self.main_window, 'sim_params_manager'):
+            config_data["simulation"] = self.main_window.sim_params_manager.get_sim_params_config()
+        
+        # Get noise options
+        if hasattr(self.main_window, 'noise_options_manager'):
+            config_data["noise"] = self.main_window.noise_options_manager.get_noise_options_config()
+        
+        # Get network options
+        if hasattr(self.main_window, 'network_options_manager'):
+            config_data["network"] = self.main_window.network_options_manager.get_network_options_config()
+        
+        # Get advanced network options
+        if hasattr(self.main_window, 'advanced_network_manager'):
+            config_data["advanced_network"] = self.main_window.advanced_network_manager.get_advanced_network_config()
+        
+        return config_data
+
     def save_config(self, config_data, file_path):
         """
         Save configuration data to a JSON file.
@@ -67,22 +106,23 @@ class ConfigManager:
         # Base validation
         if not isinstance(config_data, dict):
             return False, "Configuration data must be a dictionary"
-            
-        # Check for required sections
-        required_sections = ["neuron_model_settings", "simulation_parameters"]
+              # Check for required sections
+        required_sections = ["neuron_model", "simulation"]
         missing_sections = [s for s in required_sections if s not in config_data]
         if missing_sections:
             return False, f"Missing required sections: {', '.join(missing_sections)}"
         
         # Validate simulation parameters
-        sim_params = config_data["simulation_parameters"]
+        sim_params = config_data["simulation"]
         if not isinstance(sim_params, dict):
             return False, "Simulation parameters must be a dictionary"
         
+        # Validate sim_time
         sim_time = sim_params.get("sim_time", 0)
         if not (1 <= sim_time <= 100000):  # 1ms to 100s
             return False, "Simulation time must be between 1 and 100000 ms"
 
+        # Validate input_current
         input_current = sim_params.get("input_current", 0)
         if not (-1000 <= input_current <= 1000):  # -1000 to 1000 pA
             return False, "Input current must be between -1000 and 1000 pA"
@@ -107,7 +147,7 @@ class ConfigManager:
             return False, f"Current injection (start + duration = {current_start + current_duration}ms) exceeds simulation time ({sim_time}ms)"
         
         # Neuron model settings validation
-        neuron_settings = config_data["neuron_model_settings"]
+        neuron_settings = config_data["neuron_model"]
         if not isinstance(neuron_settings, dict):
             return False, "Neuron model settings must be a dictionary"
         
@@ -150,20 +190,20 @@ class ConfigManager:
                 return False, error_msg
         
         # Validate noise options
-        if "noise_options" in config_data:
-            is_valid, error_msg = self._validate_noise_options(config_data["noise_options"])
+        if "noise" in config_data:
+            is_valid, error_msg = self._validate_noise(config_data["noise"])
             if not is_valid:
                 return False, f"Noise options error: {error_msg}"
         
         # Validate network options  
-        if "network_options" in config_data:
-            is_valid, error_msg = self._validate_network_options(config_data["network_options"])
+        if "network" in config_data:
+            is_valid, error_msg = self._validate_network(config_data["network"])
             if not is_valid:
                 return False, f"Network options error: {error_msg}"
         
         # Validate advanced network features
-        if "advanced_network_options" in config_data:
-            is_valid, error_msg = self._validate_advanced_network_options(config_data["advanced_network_options"])
+        if "advanced_network" in config_data:
+            is_valid, error_msg = self._validate_advanced_network(config_data["advanced_network"])
             if not is_valid:
                 return False, f"Advanced network error: {error_msg}"
         
@@ -179,11 +219,17 @@ class ConfigManager:
             if not isinstance(tau, (int, float)) or tau <= 0:
                 return False, "Membrane time constant (tau_m) must be a positive number"
         
-        # Validate resting potential
+        # Validate resting potential (v_rest)
         if "v_rest" in params:
             v_rest = params["v_rest"]
             if not isinstance(v_rest, (int, float)):
                 return False, "Resting potential must be a number"
+            
+        # Validate resistance (R)
+        if "resistance" in params:
+            resistance = params["resistance"]
+            if not isinstance(resistance, (int, float)) or resistance <= 0:
+                return False, "Resistance must be a positive number"
         
         return True, ""
 
@@ -191,25 +237,25 @@ class ConfigManager:
         """Validates Izhikevich model parameters"""
         params = neuron_settings.get("parameters", {})
         
-        required_params = ["izh_a", "izh_b", "izh_c", "izh_d"]
+        required_params = ["a", "b", "c", "d"]
         missing_params = [p for p in required_params if p not in params]
         if missing_params:
             return False, f"Missing required Izhikevich parameters: {', '.join(missing_params)}"
             
         try:
-            a = float(params["izh_a"])
-            b = float(params["izh_b"])
-            c = float(params["izh_c"])
-            d = float(params["izh_d"])
+            a = float(params["a"])
+            b = float(params["b"])
+            c = float(params["c"])
+            d = float(params["d"])
             
-            if not (0.001 <= a <= 0.5):
-                return False, "Parameter 'izh_a' must be between 0.001 and 0.5 ms⁻¹"
-            if not (0 <= b <= 0.5):
-                return False, "Parameter 'izh_b' must be between 0 and 0.5"
-            if not (-100 <= c <= -30):
-                return False, "Parameter 'izh_c' must be between -100 and -30 mV"
-            if not (0 <= d <= 20):
-                return False, "Parameter 'izh_d' must be between 0 and 20 mV/ms"
+            if not (0.001 <= a <= 0.2):
+                return False, "Parameter 'a' must be between 0.001 and 0.2 ms⁻¹"
+            if not (0 <= b <= 0.3):
+                return False, "Parameter 'b' must be between 0 and 0.3"
+            if not (-75.0 <= c <= -40.0):
+                return False, "Parameter 'c' must be between -75.0 and -40.0 mV"
+            if not (0 <= d <= 10.0):
+                return False, "Parameter 'd' must be between 0 and 10.0 mV/ms"
         except (TypeError, ValueError):
             return False, "All Izhikevich parameters must be numeric values"
         
@@ -257,7 +303,7 @@ class ConfigManager:
         
         return True, ""
 
-    def _validate_noise_options(self, noise_options):
+    def _validate_noise(self, noise_options):
         """Validates noise configuration parameters"""
         if not isinstance(noise_options, dict):
             return False, "Noise options must be a dictionary"
@@ -284,7 +330,7 @@ class ConfigManager:
         
         return True, ""
 
-    def _validate_network_options(self, network_options):
+    def _validate_network(self, network_options):
         """Validates network configuration parameters"""
         if not isinstance(network_options, dict):
             return False, "Network options must be a dictionary"
@@ -334,7 +380,6 @@ class ConfigManager:
                 if not (0.0 <= rewiring_prob <= 1.0):
                     return False, "Small-world rewiring probability must be between 0.0 and 1.0"
             
-            # Additional topology parameters
             if "topology_m" in network_options:
                 m = network_options["topology_m"]
                 if not isinstance(m, int):
@@ -372,7 +417,7 @@ class ConfigManager:
         
         return True, ""
 
-    def _validate_advanced_network_options(self, advanced_options):
+    def _validate_advanced_network(self, advanced_options):
         """Validates advanced network feature parameters"""
         if not isinstance(advanced_options, dict):
             return False, "Advanced network options must be a dictionary"

@@ -1,6 +1,3 @@
-\
-# ui_forms.py
-
 from PyQt6.QtWidgets import (
     QWidget, QFormLayout, QLabel, QLineEdit, QDoubleSpinBox, QTextEdit, QComboBox
 )
@@ -14,14 +11,12 @@ class NeuronModelFormGenerator:
         self._create_forms()
 
     def _create_forms(self):
-        # Only threshold/reset are handled in sim params for LIF; all other params are model-specific
-        COMMON_PARAMS = {"v_threshold", "v_reset"}  # Only these are handled in sim params, and only for LIF
+        COMMON_PARAMS = {"v_threshold", "v_reset"}
         for model_key, config in self.neuron_models_config.items():
             widget = QWidget()
             layout = QFormLayout()
             param_widgets = {}
             for param_key, param_config in config["params"].items():
-                # For LIF, skip threshold/reset (handled in sim params); for all others, show all params
                 if model_key == "lif" and param_key in COMMON_PARAMS:
                     continue
                 label_text = param_config.get("label", param_key.replace("_", " ").title())
@@ -63,7 +58,6 @@ class NeuronModelFormGenerator:
             self.model_forms[model_key] = widget
             self.model_param_widgets[model_key] = param_widgets
 
-            # Create preset combo box for this model (remains unchanged)
             preset_combo = QComboBox()
             preset_combo.addItem("-- Select Preset --")
             if config.get("presets"):
@@ -82,13 +76,8 @@ class NeuronModelFormGenerator:
 
     def load_params_from_config(self, model_key, config_data):
         param_widgets = self.get_param_widgets(model_key)
-        # model_defaults = self.neuron_models_config[model_key]["defaults"]
         for param_key, widget in param_widgets.items():
-            # When loading, we expect config_data to use the param_key directly (e.g., "izh_a")
             value = config_data.get(param_key) 
-            # Fallback to default if not in config_data might be needed, or handled by how config is saved/loaded initially
-            # if value is None:
-            # value = model_defaults.get(param_key)
 
             if value is not None:
                 if isinstance(widget, QDoubleSpinBox):
@@ -102,7 +91,6 @@ class NeuronModelFormGenerator:
         param_widgets = self.get_param_widgets(model_key)
         params_to_save = {}
         for param_key, widget in param_widgets.items():
-            # Save with the direct param_key (e.g., "izh_a")
             if isinstance(widget, QDoubleSpinBox):
                 params_to_save[param_key] = widget.value()
             elif isinstance(widget, QTextEdit):

@@ -16,7 +16,7 @@ def create_noise_options_group(main_window):
     noise_options_group.setLayout(group_layout)
 
     # Add Noise Checkbox
-    main_window.noise_checkbox = QCheckBox("Add Background Noise:")
+    main_window.noise_checkbox = QCheckBox("Enable Background Noise")
     main_window.noise_checkbox.setToolTip("Enable stochastic fluctuations to model biological variability in neural activity.")
     main_window.noise_checkbox.stateChanged.connect(main_window.noise_options_manager.toggle_noise_params_visibility)
     group_layout.addWidget(main_window.noise_checkbox)

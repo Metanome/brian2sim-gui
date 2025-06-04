@@ -28,19 +28,52 @@ class AdvancedNetworkManager(QObject):
 
     def connect_signals(self):
         """Connect all advanced network parameter change signals."""
-        # Connect signals for all advanced network features
-        for feature_name in ['dales_principle', 'synaptic_delays', 'stdp', 'distance_connectivity']:
-            if hasattr(self, f'{feature_name}_forms'):
-                feature_forms = getattr(self, f'{feature_name}_forms')
-                if feature_forms and 'params' in feature_forms:
-                    for param_key, widget in feature_forms['params'].items():
-                        if isinstance(widget, (QCheckBox, QComboBox, QDoubleSpinBox, QSpinBox)):
-                            if hasattr(widget, 'stateChanged'):
-                                widget.stateChanged.connect(self.on_param_changed)
-                            elif hasattr(widget, 'currentIndexChanged'):
-                                widget.currentIndexChanged.connect(self.on_param_changed)
-                            elif hasattr(widget, 'valueChanged'):
-                                widget.valueChanged.connect(self.on_param_changed)
+        # Connect signals for Dale's Principle
+        if hasattr(self.main_window, 'dales_principle_forms') and self.main_window.dales_principle_forms:
+            if 'params' in self.main_window.dales_principle_forms:
+                for param_key, widget in self.main_window.dales_principle_forms['params'].items():
+                    self._connect_widget_signal(widget)
+        
+        # Connect signals for Synaptic Delays
+        if hasattr(self.main_window, 'synaptic_delays_forms') and self.main_window.synaptic_delays_forms:
+            if 'params' in self.main_window.synaptic_delays_forms:
+                for param_key, widget in self.main_window.synaptic_delays_forms['params'].items():
+                    self._connect_widget_signal(widget)
+        
+        # Connect signals for STDP
+        if hasattr(self.main_window, 'stdp_forms') and self.main_window.stdp_forms:
+            if 'params' in self.main_window.stdp_forms:
+                for param_key, widget in self.main_window.stdp_forms['params'].items():
+                    self._connect_widget_signal(widget)
+        
+        # Connect signals for Distance Connectivity
+        if hasattr(self.main_window, 'distance_connectivity_forms') and self.main_window.distance_connectivity_forms:
+            if 'params' in self.main_window.distance_connectivity_forms:
+                for param_key, widget in self.main_window.distance_connectivity_forms['params'].items():
+                    self._connect_widget_signal(widget)
+        
+        # Connect main feature enable/disable checkboxes
+        feature_checkboxes = [
+            'dales_principle_checkbox',
+            'synaptic_delays_checkbox', 
+            'stdp_checkbox',
+            'distance_connectivity_checkbox'
+        ]
+        
+        for checkbox_name in feature_checkboxes:
+            if hasattr(self.main_window, checkbox_name):
+                checkbox = getattr(self.main_window, checkbox_name)
+                if checkbox:
+                    checkbox.stateChanged.connect(self.on_param_changed)
+    
+    def _connect_widget_signal(self, widget):
+        """Helper method to connect appropriate signal for a widget."""
+        if isinstance(widget, QCheckBox):
+            widget.stateChanged.connect(self.on_param_changed)
+        elif isinstance(widget, QComboBox):
+            widget.currentIndexChanged.connect(self.on_param_changed)
+        elif isinstance(widget, (QDoubleSpinBox, QSpinBox)):
+            widget.valueChanged.connect(self.on_param_changed)
 
     def on_param_changed(self):
         """Called when any advanced network parameter changes."""
@@ -105,7 +138,7 @@ class AdvancedNetworkManager(QObject):
                 # Hide/show the parameter widget
                 if param_key in self.main_window.synaptic_delays_forms['params']:
                     self.main_window.synaptic_delays_forms['params'][param_key].setVisible(is_visible)
-                  # Hide/show the parameter label
+                # Hide/show the parameter label
                 if param_key in self.main_window.synaptic_delays_forms['labels']:
                     self.main_window.synaptic_delays_forms['labels'][param_key].setVisible(is_visible)
 
@@ -497,3 +530,7 @@ w = clip(w - A_pre * {A_minus}, {w_min}, {w_max})
             'distance_connectivity': DISTANCE_CONNECTIVITY_CONFIG
         }
         return config_map.get(feature_name, {}).get(param_key, {})
+
+    def get_advanced_network_config(self):
+        """Get advanced network configuration data for config manager."""
+        return self.get_advanced_network_options()

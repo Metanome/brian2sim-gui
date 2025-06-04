@@ -100,3 +100,7 @@ class NoiseOptionsManager(QObject):
             index = self.main_window.noise_method_combo.findText(preset_values["noise_method"])
             if index >= 0:
                 self.main_window.noise_method_combo.setCurrentIndex(index)
+
+    def get_noise_options_config(self):
+        """Get noise options configuration data for config manager."""
+        return self.get_noise_options()

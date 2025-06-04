@@ -15,7 +15,7 @@ def create_network_options_group(main_window):
     network_options_group.setLayout(group_layout)
 
     # Enable Synaptic Connections Checkbox
-    main_window.synaptic_connections_checkbox = QCheckBox("Enable synaptic connections")
+    main_window.synaptic_connections_checkbox = QCheckBox("Enable Synaptic Connections")
     main_window.synaptic_connections_checkbox.setToolTip(
         "Enable interactions between neurons through synaptic connections. Required for network effects and emergent dynamics."
     )

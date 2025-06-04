@@ -18,20 +18,29 @@ from network_options import NetworkOptionsManager
 from advanced_network_ui import create_advanced_network_group
 from advanced_network_manager import AdvancedNetworkManager
 from config_manager_ui import create_config_management_group
+from simulation_ui import create_simulation_tab
+from simulation_manager import SimulationManager
+from simulation_engine import SimulationEngine
+from results_manager import ResultsManager
+from code_generator import CodeGenerator
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Brian2Sim")
-        self.setGeometry(100, 100, 900, 700)
-
-        # Initialize all managers
+        self.setGeometry(100, 100, 900, 700)        # Initialize all managers
         self.config_manager = ConfigManager(self)
         self.neuron_models_manager = NeuronModelsManager(self)
         self.sim_params_manager = SimParamsManager(self)
         self.noise_options_manager = NoiseOptionsManager(self)
         self.network_options_manager = NetworkOptionsManager(self)
         self.advanced_network_manager = AdvancedNetworkManager(self)
+        
+        # Initialize simulation components
+        self.simulation_engine = SimulationEngine()
+        self.results_manager = ResultsManager(self)
+        self.code_generator = CodeGenerator()
+        self.simulation_manager = SimulationManager(self)
 
         # Store references to UI elements that need to be accessed by managers
         self.neuron_model_combo = None
@@ -98,6 +107,30 @@ class MainWindow(QMainWindow):
         self.distance_connectivity_preset_combo = None
         self.advanced_network_preset_combo = None
 
+        # Simulation UI elements - will be created by simulation_ui
+        self.run_simulation_button = None
+        self.stop_simulation_button = None
+        self.reset_simulation_button = None
+        self.auto_plot_checkbox = None
+        self.show_statistics_checkbox = None
+        self.simulation_progress_bar = None
+        self.simulation_status_label = None
+        self.elapsed_time_label = None
+        self.remaining_time_label = None
+        self.simulation_log = None
+        self.results_tabs = None
+        self.raster_plot_widget = None
+        self.voltage_plot_widget = None
+        self.statistics_widget = None
+        self.simulation_status_label = None
+        self.elapsed_time_label = None
+        self.remaining_time_label = None
+        self.simulation_log = None
+        self.results_tabs = None
+        self.raster_plot_widget = None
+        self.voltage_plot_widget = None
+        self.statistics_widget = None
+
         # Config Tab UI elements - will be created by config_manager_ui
         self.load_config_button = None
         self.save_config_button = None
@@ -107,14 +140,24 @@ class MainWindow(QMainWindow):
         
         # Set the sim_params_ui_module for SimParamsManager
         import sim_params_ui
-        self.sim_params_manager.sim_params_ui_module = sim_params_ui
-
-        # Connect signals after UI is initialized but before setting initial state
+        self.sim_params_manager.sim_params_ui_module = sim_params_ui        # Connect signals after UI is initialized but before setting initial state
         self.neuron_models_manager.connect_signals()
         self.sim_params_manager.connect_signals()
         self.noise_options_manager.connect_signals()
         self.network_options_manager.connect_signals()
         self.advanced_network_manager.connect_signals()
+        
+        # Connect simulation components
+        self.simulation_manager.set_components(
+            self.simulation_engine, 
+            self.results_manager, 
+            self.code_generator
+        )
+        
+        # Connect simulation manager signals
+        self.simulation_manager.progress_updated.connect(self._on_simulation_progress)
+        self.simulation_manager.simulation_finished.connect(self._on_simulation_finished)
+        self.simulation_manager.log_message.connect(self._on_simulation_log)
 
         # Set initial model to LIF through the neuron_models_manager
         for i in range(self.neuron_model_combo.count()):
@@ -171,10 +214,12 @@ class MainWindow(QMainWindow):
         main_tab_scroll_area = QScrollArea()
         main_tab_scroll_area.setWidgetResizable(True)
         main_tab_scroll_area.setFrameStyle(QFrame.Shape.NoFrame)
-        main_tab_scroll_area.setWidget(main_tab_content_holder)
-
-        # Add the scroll_area (which contains all the content) as the "Main" tab page
+        main_tab_scroll_area.setWidget(main_tab_content_holder)        # Add the scroll_area (which contains all the content) as the "Main" tab page
         self.tabs.addTab(main_tab_scroll_area, "Main")
+        
+        # --- Simulation Tab ---
+        simulation_tab = create_simulation_tab(self)
+        self.tabs.addTab(simulation_tab, "Simulation")
         
         # Set initial tab
         self.tabs.setCurrentIndex(0)
@@ -205,12 +250,12 @@ class MainWindow(QMainWindow):
 
         current_pos_tracker[1] += 1  # Move to next column
         if current_pos_tracker[1] >= num_cols:
-            current_pos_tracker[1] = 0  # Reset column
+            current_pos_tracker[1] = 0  # Reset column            
             current_pos_tracker[0] += 1  # Move to next row
     
     def update_lif_params_visibility(self, is_lif_model):
         self.sim_params_manager.update_lif_params_visibility(is_lif_model)
-
+    
     def load_configuration(self):
         """Load configuration from a JSON file and update all UI elements."""
         file_path, _ = QFileDialog.getOpenFileName(self, "Load Configuration", "", "JSON Files (*.json)")
@@ -218,33 +263,62 @@ class MainWindow(QMainWindow):
             config_data = self.config_manager.load_config(file_path)
             if config_data:
                 # Load configuration in a specific order to ensure dependent UI updates work correctly
-                
                 # 1. Load neuron model first as other sections may depend on it
-                self.neuron_models_manager.load_neuron_model_config(config_data.get("neuron_model_settings", {}))
+                self.neuron_models_manager.load_neuron_model_config(config_data.get("neuron_model", {}))
                 
                 # 2. Load simulation parameters
-                self.sim_params_manager.load_sim_params(config_data.get("simulation_parameters", {}))
+                self.sim_params_manager.load_sim_params(config_data.get("simulation", {}))
                 
                 # 3. Load noise options
-                self.noise_options_manager.load_noise_options(config_data.get("noise_options", {}))
+                self.noise_options_manager.load_noise_options(config_data.get("noise", {}))
                 
                 # 4. Load network options
-                self.network_options_manager.load_network_options(config_data.get("network_options", {}))
+                self.network_options_manager.load_network_options(config_data.get("network", {}))
                 
                 # 5. Load advanced network options
-                self.advanced_network_manager.load_advanced_network_options(config_data.get("advanced_network_options", {}))
+                self.advanced_network_manager.load_advanced_network_options(config_data.get("advanced_network", {}))
 
     def save_configuration(self):
         """Save current configuration to a JSON file."""
         file_path, _ = QFileDialog.getSaveFileName(self, "Save Configuration", "", "JSON Files (*.json)")
         if file_path:
             config_data = {
-                "neuron_model_settings": self.neuron_models_manager.get_neuron_model_config(),
-                "simulation_parameters": self.sim_params_manager.get_sim_params(),
-                "noise_options": self.noise_options_manager.get_noise_options(),
-                "network_options": self.network_options_manager.get_network_options(),
-                "advanced_network_options": self.advanced_network_manager.get_advanced_network_options()            }
+                "neuron_model": self.neuron_models_manager.get_neuron_model_config(),
+                "simulation": self.sim_params_manager.get_sim_params_config(),
+                "noise": self.noise_options_manager.get_noise_options_config(),
+                "network": self.network_options_manager.get_network_options_config(),
+                "advanced_network": self.advanced_network_manager.get_advanced_network_config()
+            }
             self.config_manager.save_config(config_data, file_path)
+
+    def _on_simulation_progress(self, progress, message):
+        """Handle simulation progress updates."""
+        if hasattr(self, 'simulation_progress_bar'):
+            self.simulation_progress_bar.setValue(progress)
+        if hasattr(self, 'simulation_status_label'):
+            self.simulation_status_label.setText(message)
+
+    def _on_simulation_finished(self, success):
+        """Handle simulation completion."""
+        if success:
+            if hasattr(self, 'simulation_status_label'):
+                self.simulation_status_label.setText("Simulation completed successfully!")
+        else:
+            if hasattr(self, 'simulation_status_label'):
+                self.simulation_status_label.setText("Simulation failed or was stopped")
+
+    def _on_simulation_log(self, message):
+        """Handle simulation log messages."""
+        if hasattr(self, 'simulation_log'):
+            current_text = self.simulation_log.toPlainText()
+            if current_text:
+                new_text = current_text + "\n" + message
+            else:
+                new_text = message
+            self.simulation_log.setPlainText(new_text)
+            # Auto-scroll to bottom
+            scrollbar = self.simulation_log.verticalScrollBar()
+            scrollbar.setValue(scrollbar.maximum())
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

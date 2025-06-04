@@ -5,7 +5,8 @@ PRESET_CUSTOM_TEXT = "Custom"
 NEURON_MODELS_CONFIG = {
     "lif": {
         "display_name": "Leaky Integrate-and-Fire (LIF)",
-        "params": {            "tau_m": {
+        "params": {
+            "tau_m": {
                 "type": float,
                 "label": "τm (ms):",
                 "tooltip": "Membrane time constant in milliseconds.\nTypical ranges:\n• Pyramidal neurons: 20-30 ms\n• Fast-spiking interneurons: 10-15 ms\n• Motor neurons: 15-25 ms",
@@ -22,6 +23,15 @@ NEURON_MODELS_CONFIG = {
                 "min": -80.0,
                 "max": -50.0,
                 "step": 0.5
+            },
+            "resistance": {
+                "type": float,
+                "label": "R (MΩ):",
+                "tooltip": "Membrane resistance in megaohms.\nTypical ranges:\n• Pyramidal neurons: 50-100 MΩ\n• Fast-spiking interneurons: 20-50 MΩ\n• Motor neurons: 30-70 MΩ",
+                "default": 100.0,
+                "min": 10.0,
+                "max": 200.0,
+                "step": 1.0
             }
         },
         "presets": {
@@ -30,7 +40,8 @@ NEURON_MODELS_CONFIG = {
                 "display_name": "Regular Spiking Pyramidal",
                 "values": {
                     "tau_m": 20.0,     # Membrane time constant (ms)
-                    "v_rest": -70.0    # Resting potential (mV)
+                    "v_rest": -70.0,    # Resting potential (mV)
+                    "resistance": 100.0  # Membrane resistance (MΩ)
                 },
                 "sim_params": {
                     "sim_time": 500,
@@ -54,7 +65,8 @@ NEURON_MODELS_CONFIG = {
                 "display_name": "Fast Spiking Interneuron",
                 "values": {
                     "tau_m": 10.0,     # Fast membrane time constant
-                    "v_rest": -70.0    # Typical resting potential
+                    "v_rest": -70.0,    # Typical resting potential
+                    "resistance": 50.0   # Lower resistance for fast spiking
                 },
                 "sim_params": {
                     "sim_time": 500,
@@ -78,7 +90,8 @@ NEURON_MODELS_CONFIG = {
                 "display_name": "Adapting Neuron",
                 "values": {
                     "tau_m": 25.0,     # Slower membrane time constant
-                    "v_rest": -65.0    # Slightly higher resting potential
+                    "v_rest": -65.0,    # Slightly higher resting potential
+                    "resistance": 80.0   # Moderate resistance
                 },
                 "sim_params": {
                     "sim_time": 500,
@@ -103,6 +116,7 @@ NEURON_MODELS_CONFIG = {
                 "values": {
                     "tau_m": 20.0,      # Membrane time constant (ms)
                     "v_rest": -70.0,    # Resting potential (mV)
+                    "resistance": 100.0  # Membrane resistance (MΩ)
                 },
                 "sim_params": {
                     "sim_time": 500,          # Simulation duration (ms)
@@ -127,6 +141,7 @@ NEURON_MODELS_CONFIG = {
                 "values": {
                     "tau_m": 25.0,     # Membrane time constant (ms)
                     "v_rest": -65.0,   # Resting potential (mV)
+                    "resistance": 80.0  # Membrane resistance (MΩ)
                 },
                 "sim_params": {
                     "sim_time": 500,
@@ -151,6 +166,7 @@ NEURON_MODELS_CONFIG = {
                 "values": {
                     "tau_m": 10.0,     # Faster membrane time constant
                     "v_rest": -70.0,   # Resting potential (mV)
+                    "resistance": 50.0   # Lower resistance for fast spiking
                 },
                 "sim_params": {
                     "sim_time": 500,
@@ -175,6 +191,7 @@ NEURON_MODELS_CONFIG = {
                 "values": {
                     "tau_m": 20.0,    # Membrane time constant (ms)
                     "v_rest": -70.0,  # Resting potential (mV)
+                    "resistance": 100.0  # Membrane resistance (MΩ)
                 },
                 "sim_params": {
                     "sim_time": 1000,
@@ -205,7 +222,7 @@ NEURON_MODELS_CONFIG = {
         "params": {
             "a": {
                 "type": float,
-                "label": "a:",
+                "label": "a (1/ms):",
                 "tooltip": "Recovery time scale.\nTypical ranges:\n• Regular spiking: 0.02\n• Fast spiking: 0.1\n• Chattering: 0.02",
                 "default": 0.02,
                 "min": 0.001,
@@ -214,7 +231,7 @@ NEURON_MODELS_CONFIG = {
             },
             "b": {
                 "type": float,
-                "label": "b:",
+                "label": "b (1/mV):",
                 "tooltip": "Sensitivity of recovery to voltage.\nTypical ranges: 0.2-0.25",
                 "default": 0.2,
                 "min": 0.0,
@@ -223,7 +240,7 @@ NEURON_MODELS_CONFIG = {
             },
             "c": {
                 "type": float,
-                "label": "c:",
+                "label": "c (mV):",
                 "tooltip": "Post-spike reset voltage.\nTypical ranges:\n• Regular spiking: -65\n• Chattering: -50",
                 "default": -65.0,
                 "min": -75.0,
@@ -232,8 +249,8 @@ NEURON_MODELS_CONFIG = {
             },
             "d": {
                 "type": float,
-                "label": "d:",
-                "tooltip": "Post-spike recovery increment.\nTypical ranges:\n• Regular spiking: 8\n• Fast spiking: 2\n• Chattering: 2",
+                "label": "d (pA):",
+                "tooltip": "Post-spike recovery increment.\nTypical ranges:\n• Regular spiking: 8\n• Fast spiking: 2\n• Chattering: 2\n• Intrinsic bursting: 4\n• No adaptation: 0",
                 "default": 8.0,
                 "min": 0.0,
                 "max": 10.0,
