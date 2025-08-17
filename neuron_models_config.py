@@ -207,10 +207,10 @@ NEURON_MODELS_CONFIG = {
                     "noise_intensity": 0.1,
                     "noise_method": "additive"
                 },
-                "network_options": {
+                "network_options": {                    
                     "synapse_enabled": True,
                     "topology_type": "random",
-                    "syn_weight": 0.2,       # Moderate synaptic strength
+                    "synaptic_weight": 0.2,       # Moderate synaptic strength
                     "syn_prob": 0.1,         # Sparse connectivity
                     "syn_delay": 2.0         # 2ms synaptic delay
                 }
@@ -374,11 +374,11 @@ NEURON_MODELS_CONFIG = {
                     "noise_enabled": True,
                     "noise_intensity": 1.0,
                     "noise_method": "additive"
-                },
+                },                
                 "network_options": {
                     "synapse_enabled": True,
                     "topology_type": "random",
-                    "syn_weight": 15.0,
+                    "synaptic_weight": 15.0,
                     "syn_prob": 0.1
                 }
             },
@@ -724,6 +724,168 @@ NEURON_MODELS_CONFIG = {
                 "noise_options": {
                     "noise_enabled": True,
                     "noise_intensity": 60.0,  # Higher noise for irregularity
+                    "noise_method": "additive"
+                },
+                "network_options": {
+                    "synapse_enabled": False
+                }
+            }
+        }
+    },
+    "hodgkin_huxley": {
+        "display_name": "Hodgkin-Huxley",
+        "params": {
+            "C": {
+                "type": float,
+                "label": "C (μF/cm²):",
+                "tooltip": "Membrane capacitance per unit area.\nTypical value: 1.0 μF/cm² (Hodgkin & Huxley 1952)",
+                "default": 1.0,
+                "min": 0.1,
+                "max": 10.0,
+                "step": 0.1
+            },
+            "gNa_max": {
+                "type": float,
+                "label": "gNa max (mS/cm²):",
+                "tooltip": "Maximum sodium conductance density.\nTypical value: 120 mS/cm² (squid axon)",
+                "default": 120.0,
+                "min": 50.0,
+                "max": 200.0,
+                "step": 5.0
+            },
+            "gK_max": {
+                "type": float,
+                "label": "gK max (mS/cm²):",
+                "tooltip": "Maximum potassium conductance density.\nTypical value: 36 mS/cm² (squid axon)",
+                "default": 36.0,
+                "min": 10.0,
+                "max": 100.0,
+                "step": 2.0
+            },
+            "gL": {
+                "type": float,
+                "label": "gL (mS/cm²):",
+                "tooltip": "Leak conductance density.\nTypical value: 0.3 mS/cm²",
+                "default": 0.3,
+                "min": 0.01,
+                "max": 5.0,
+                "step": 0.01
+            },
+            "ENa": {
+                "type": float,
+                "label": "ENa (mV):",
+                "tooltip": "Sodium reversal potential.\nTypical value: +50 mV",
+                "default": 50.0,
+                "min": 30.0,
+                "max": 70.0,
+                "step": 1.0
+            },
+            "EK": {
+                "type": float,
+                "label": "EK (mV):",
+                "tooltip": "Potassium reversal potential.\nTypical value: -77 mV",
+                "default": -77.0,
+                "min": -100.0,
+                "max": -50.0,
+                "step": 1.0
+            },
+            "EL": {
+                "type": float,
+                "label": "EL (mV):",
+                "tooltip": "Leak reversal potential.\nTypical value: -54.4 mV",
+                "default": -54.4,
+                "min": -80.0,
+                "max": -40.0,
+                "step": 0.1
+            },
+            "temperature": {
+                "type": float,
+                "label": "Temperature (°C):",
+                "tooltip": "Temperature for rate constant calculations.\nOriginal HH: 6.3°C, Mammalian: 37°C",
+                "default": 6.3,
+                "min": 0.0,
+                "max": 40.0,
+                "step": 0.1
+            }
+        },
+        "presets": {
+            "none": {"display_name": PRESET_DEFAULT_TEXT, "values": {}},
+            "squid_axon": {
+                "display_name": "Squid Giant Axon (Original HH)",
+                "values": {
+                    "C": 1.0,
+                    "gNa_max": 120.0,
+                    "gK_max": 36.0,
+                    "gL": 0.3,
+                    "ENa": 50.0,
+                    "EK": -77.0,
+                    "EL": -54.4,
+                    "temperature": 6.3
+                },
+                "sim_params": {
+                    "sim_time": 100,
+                    "input_current": 10.0,  # μA/cm²
+                    "num_neurons": 1,
+                    "current_start": 10,
+                    "current_duration": 50
+                },
+                "noise_options": {
+                    "noise_enabled": False
+                },
+                "network_options": {
+                    "synapse_enabled": False
+                }
+            },
+            "mammalian_neuron": {
+                "display_name": "Mammalian Neuron (37°C)",
+                "values": {
+                    "C": 1.0,
+                    "gNa_max": 100.0,  # Slightly lower for mammalian
+                    "gK_max": 30.0,
+                    "gL": 0.2,
+                    "ENa": 55.0,       # Higher for mammalian
+                    "EK": -80.0,       # More negative
+                    "EL": -65.0,       # More negative
+                    "temperature": 37.0
+                },
+                "sim_params": {
+                    "sim_time": 100,
+                    "input_current": 8.0,
+                    "num_neurons": 1,
+                    "current_start": 20,
+                    "current_duration": 30
+                },
+                "noise_options": {
+                    "noise_enabled": True,
+                    "noise_intensity": 0.5,
+                    "noise_method": "additive"
+                },
+                "network_options": {
+                    "synapse_enabled": False
+                }
+            },
+            "cortical_pyramidal": {
+                "display_name": "Cortical Pyramidal Cell",
+                "values": {
+                    "C": 1.2,          # Slightly higher capacitance
+                    "gNa_max": 80.0,   # Lower sodium conductance
+                    "gK_max": 25.0,    # Lower potassium conductance
+                    "gL": 0.15,        # Lower leak
+                    "ENa": 55.0,
+                    "EK": -80.0,
+                    "EL": -70.0,       # More hyperpolarized
+                    "temperature": 37.0
+                },
+                "sim_params": {
+                    "sim_time": 200,
+                    "input_current": 5.0,  # Lower threshold
+                    "num_neurons": 1,
+                    "current_start": 50,
+                    "current_duration": 100
+                },
+                "noise_options": {
+                    "noise_enabled": True,
+                    "noise_intensity": 0.3,
                     "noise_method": "additive"
                 },
                 "network_options": {

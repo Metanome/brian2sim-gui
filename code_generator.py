@@ -153,10 +153,11 @@ class CodeGenerator:
             ])
             
         elif model_type == 'izhikevich':
-            a = neuron_params.get('a', 0.02)
-            b = neuron_params.get('b', 0.2)
-            c = neuron_params.get('c', -65)
-            d = neuron_params.get('d', 8)
+            parameters = neuron_params.get('parameters', {})
+            a = parameters.get('a', 0.02)
+            b = parameters.get('b', 0.2)
+            c = parameters.get('c', -65)
+            d = parameters.get('d', 8)
             
             lines.extend([
                 f'    a = {a}',
@@ -175,6 +176,42 @@ class CodeGenerator:
                 '                          reset="v = c; u += d")',
                 f'    neurons.v = {c}',
                 f'    neurons.u = {b} * {c}',
+                '    ',
+            ])
+            
+        elif model_type == 'adex':
+            # Adaptive Exponential Integrate-and-Fire (AdEx)
+            parameters = neuron_params.get('parameters', {})
+            C = parameters.get('C', 200)
+            gL = parameters.get('gL', 10)
+            EL = parameters.get('EL', -70)
+            VT = parameters.get('VT', -50)
+            delT = parameters.get('delT', 2)
+            a = parameters.get('a', 2)
+            tauw = parameters.get('tauw', 30)
+            b = parameters.get('b', 60)
+            
+            lines.extend([
+                f'    C = {C} * pF',
+                f'    gL = {gL} * nS',
+                f'    EL = {EL} * mV',
+                f'    VT = {VT} * mV',
+                f'    delT = {delT} * mV',
+                f'    a = {a} * nS',
+                f'    tauw = {tauw} * ms',
+                f'    b = {b} * pA',
+                '    ',
+                '    neuron_eqs = """',
+                '    dv/dt = (gL*(EL - v) + gL*delT*exp((v - VT)/delT) - w + I)/C : volt',
+                '    dw/dt = (a*(v - EL) - w)/tauw : amp',
+                '    I : amp',
+                '    """',
+                '    ',
+                f'    neurons = NeuronGroup({num_neurons}, neuron_eqs,',
+                '                          threshold="v > VT + 5*delT",',
+                '                          reset="v = EL; w += b")',
+                '    neurons.v = EL',
+                '    neurons.w = 0 * pA',
                 '    ',
             ])
         else:

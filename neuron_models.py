@@ -6,21 +6,28 @@ from neuron_models_config import NEURON_MODELS_CONFIG, MODEL_PRESETS, PRESET_DEF
 class NeuronModelsManager:
     def __init__(self, main_window):
         self.main_window = main_window
-        self.form_generator = NeuronModelFormGenerator(NEURON_MODELS_CONFIG)
         self.current_model_name = None
         self.ignore_param_changes = False  # Flag to prevent preset updates during preset loading
+    
+    @property 
+    def form_generator(self):
+        """Access the form generator created in the UI"""
+        return getattr(self.main_window, 'neuron_model_form_generator', None)
     
     def get_neuron_model(self):
         """
         Get the currently selected neuron model configuration.
           Returns:
-            dict: Current neuron model configuration including model_key and parameters
-        """
+            dict: Current neuron model configuration including model_key and parameters        """
         return self.get_neuron_model_config()
 
     def connect_signals(self):
         self.main_window.neuron_model_combo.currentIndexChanged.connect(self.update_neuron_param_form_and_presets)
         self.main_window.neuron_model_preset_combo.currentIndexChanged.connect(self.apply_neuron_model_preset)
+        
+        # Connect parameter change signals for all neuron model forms
+        for model_key in NEURON_MODELS_CONFIG.keys():
+            self.connect_param_change_signals(model_key)
         
         # Connect parameter change signals to update preset selection
         self.main_window.sim_params_manager.param_changed.connect(self.on_param_changed)

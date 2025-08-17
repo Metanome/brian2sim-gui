@@ -295,6 +295,49 @@ class SimulationManager(QObject):
             
         if hasattr(self.main_window, 'advanced_network_manager'):
             params['advanced_network'] = self.main_window.advanced_network_manager.get_advanced_network_options()
+        
+        if hasattr(self.main_window, 'input_patterns_manager'):
+            params['input_patterns'] = self.main_window.input_patterns_manager.get_parameters()
+        
+        # Add gap junctions parameters
+        if hasattr(self.main_window, 'gap_junctions_ui'):
+            params['gap_junctions'] = self.main_window.gap_junctions_ui.get_parameters()
+        
+        # Add synaptic receptors parameters
+        if hasattr(self.main_window, 'synaptic_receptors_ui'):
+            params['synaptic_receptors'] = self.main_window.synaptic_receptors_ui.get_parameters()
+        else:
+            params['synaptic_receptors'] = {'enabled': False}
+        
+        # Add short-term plasticity parameters
+        if hasattr(self.main_window, 'short_term_plasticity_ui'):
+            params['short_term_plasticity'] = self.main_window.short_term_plasticity_ui.get_parameters()
+        else:
+            params['short_term_plasticity'] = {'enabled': False}
+        
+        # Add calcium dynamics parameters
+        if hasattr(self.main_window, 'calcium_dynamics_ui'):
+            params['calcium_dynamics'] = self.main_window.calcium_dynamics_ui.get_parameters()
+        else:
+            params['calcium_dynamics'] = {'enabled': False}
+        
+        # Add homeostatic plasticity parameters
+        if hasattr(self.main_window, 'homeostatic_plasticity_ui'):
+            params['homeostatic_plasticity'] = self.main_window.homeostatic_plasticity_ui.get_parameters()
+        else:
+            params['homeostatic_plasticity'] = {'enabled': False}
+        
+        # Add neuromodulation parameters
+        if hasattr(self.main_window, 'neuromodulation_ui'):
+            params['neuromodulation'] = self.main_window.neuromodulation_ui.get_parameters()
+        else:
+            params['neuromodulation'] = {'enabled': False}
+        
+        # Add multi-compartment parameters
+        if hasattr(self.main_window, 'multicompartment_ui'):
+            params['multicompartment'] = self.main_window.multicompartment_ui.get_parameters()
+        else:
+            params['multicompartment'] = {'enabled': False}
             
         return params
     

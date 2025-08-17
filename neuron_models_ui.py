@@ -1,23 +1,31 @@
+"""
+Neuron Model Selection UI Components for Brian2 neural network simulator.
+Creates UI elements for selecting neuron models and configuring their parameters using config-driven approach.
+"""
+
 from PyQt6.QtWidgets import (
     QGroupBox, QVBoxLayout, QLabel, QComboBox, QStackedWidget, QHBoxLayout
 )
-from neuron_models import NEURON_MODELS_CONFIG, NeuronModelsManager
+from ui_forms import NeuronModelFormGenerator
+from neuron_models_config import NEURON_MODELS_CONFIG
 
 def create_neuron_model_group(main_window):
     """
-    Creates the 'Neuron Model Selection' QGroupBox and its child widgets.
-    Uses display_name from NEURON_MODELS_CONFIG for the ComboBox items.
+    Creates the 'Neuron Model Selection' QGroupBox using config-driven approach.
     """
     neuron_model_group = QGroupBox("Neuron Model")
     neuron_model_group_layout = QVBoxLayout()
 
+    # Create form generator for neuron models
+    main_window.neuron_model_form_generator = NeuronModelFormGenerator(NEURON_MODELS_CONFIG)
+
     # --- Neuron Model Selection ComboBox ---
     model_selection_layout = QHBoxLayout()
     model_label = QLabel("Select Neuron Model:")
-    model_label.setToolTip("Choose the mathematical model to simulate neuron behavior.") # Added tooltip
+    model_label.setToolTip("Choose the mathematical model to simulate neuron behavior.")
     model_selection_layout.addWidget(model_label)
 
-    # Model Type ComboBox
+    # Model Type ComboBox  
     main_window.neuron_model_combo = QComboBox()
     for model_key, config_data in NEURON_MODELS_CONFIG.items():
         main_window.neuron_model_combo.addItem(config_data["display_name"], userData=model_key)
@@ -30,27 +38,30 @@ def create_neuron_model_group(main_window):
     preset_label = QLabel("Model Presets:")
     preset_label.setToolTip("Load predefined parameter sets for the selected neuron model.")
     preset_layout.addWidget(preset_label)
-
+    
     main_window.neuron_model_preset_combo = QComboBox()
     main_window.neuron_model_preset_combo.setToolTip("Select a preset to quickly apply common parameter values.")
     preset_layout.addWidget(main_window.neuron_model_preset_combo)
-    neuron_model_group_layout.addLayout(preset_layout)    # --- Neuron Parameter Forms (StackedWidget) ---
+    neuron_model_group_layout.addLayout(preset_layout)
+    
+    # --- Neuron Parameter Forms (StackedWidget) ---
     main_window.neuron_model_stacked_widget = QStackedWidget()
     main_window.neuron_model_forms = {}
+    
+    # Create forms for each neuron model using the form generator
     for model_key in NEURON_MODELS_CONFIG.keys():
-        form_widget = main_window.neuron_models_manager.form_generator.get_form_widget(model_key)
+        form_widget = main_window.neuron_model_form_generator.get_form_widget(model_key)
         if form_widget:
             main_window.neuron_model_stacked_widget.addWidget(form_widget)
-            main_window.neuron_model_forms[model_key] = {"widget": form_widget, "params": main_window.neuron_models_manager.form_generator.get_param_widgets(model_key)}
+            main_window.neuron_model_forms[model_key] = {
+                "widget": form_widget, 
+                "params": main_window.neuron_model_form_generator.get_param_widgets(model_key)
+            }
+    
     neuron_model_group_layout.addWidget(main_window.neuron_model_stacked_widget)
     neuron_model_group.setLayout(neuron_model_group_layout)
 
-    # Connect signals for model and preset changes
-    main_window.neuron_model_combo.currentIndexChanged.connect(main_window.neuron_models_manager.update_neuron_param_form_and_presets)
-    main_window.neuron_model_preset_combo.currentIndexChanged.connect(main_window.neuron_models_manager.apply_neuron_model_preset)
-
-    # Connect parameter change signals for all neuron model forms
-    for model_key in NEURON_MODELS_CONFIG.keys():
-        main_window.neuron_models_manager.connect_param_change_signals(model_key)
+    # Note: Signal connections are handled in neuron_models_manager.connect_signals()
+    # which is called after UI initialization
 
     return neuron_model_group

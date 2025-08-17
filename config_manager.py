@@ -340,9 +340,8 @@ class ConfigManager:
             if not isinstance(network_options["synapse_enabled"], bool):
                 return False, "Network 'synapse_enabled' must be a boolean value"
         
-        # Validate synaptic weight (always validate if present)
-        if "syn_weight" in network_options:
-            weight = network_options["syn_weight"]
+        # Validate synaptic weight (always validate if present)        if "synaptic_weight" in network_options:
+            weight = network_options["synaptic_weight"]
             if not isinstance(weight, (int, float)):
                 return False, "Synaptic weight must be a numeric value"
             if not (0.0 <= weight <= 100.0):

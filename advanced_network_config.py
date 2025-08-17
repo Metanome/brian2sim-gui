@@ -93,7 +93,8 @@ SYNAPTIC_DELAYS_CONFIG = {
         "max": 10.0,
         "step": 0.1,
         "tooltip": "Minimum synaptic delay. "
-                  "Cortical synapses: 0.5-1.0 ms minimum for synaptic processing."
+                  "Cortical synapses: 0.5-1.0 ms minimum for synaptic processing.",
+        "depends_on": {"delay_type": "uniform"}
     },
     "max_delay": {
         "label": "Maximum Delay (ms):",
@@ -103,7 +104,8 @@ SYNAPTIC_DELAYS_CONFIG = {
         "max": 50.0,
         "step": 0.1,
         "tooltip": "Maximum synaptic delay. "
-                  "Local circuits: 1-5 ms, long-range: up to 50 ms."
+                  "Local circuits: 1-5 ms, long-range: up to 50 ms.",
+        "depends_on": {"delay_type": "uniform"}
     },
     "mean_delay": {
         "label": "Mean Delay (ms):",
@@ -113,7 +115,8 @@ SYNAPTIC_DELAYS_CONFIG = {
         "max": 20.0,
         "step": 0.1,
         "tooltip": "Mean delay for normal/exponential distributions. "
-                  "Typical cortical delays: 1-3 ms."
+                  "Typical cortical delays: 1-3 ms.",
+        "depends_on": {"delay_type": ["normal", "exponential"]}
     },
     "delay_std": {
         "label": "Delay Std Dev (ms):",
@@ -123,7 +126,8 @@ SYNAPTIC_DELAYS_CONFIG = {
         "max": 5.0,
         "step": 0.1,
         "tooltip": "Standard deviation for normal delay distribution. "
-                  "Typical variability: 0.2-0.5 ms for local circuits."
+                  "Typical variability: 0.2-0.5 ms for local circuits.",
+        "depends_on": {"delay_type": "normal"}
     },
     "conduction_velocity": {
         "label": "Conduction Velocity (m/s):",
@@ -133,7 +137,8 @@ SYNAPTIC_DELAYS_CONFIG = {
         "max": 100.0,
         "step": 0.1,
         "tooltip": "Axonal conduction velocity for distance-dependent delays. "
-                  "Unmyelinated: 0.5-2 m/s, Myelinated: 10-100 m/s, Local: ~1 m/s."
+                  "Unmyelinated: 0.5-2 m/s, Myelinated: 10-100 m/s, Local: ~1 m/s.",
+        "depends_on": {"delay_type": "distance_dependent"}
     }
 }
 
@@ -453,129 +458,17 @@ DISTANCE_CONNECTIVITY_PRESETS = {
     }
 }
 
-# ====== COMBINED ADVANCED NETWORK PRESETS ======
+# ====== COMBINED CONFIGURATION ======
+# Complete advanced network configuration combining all features
+ADVANCED_NETWORK_CONFIG = {
+    "dales_principle": DALES_PRINCIPLE_CONFIG,
+    "synaptic_delays": SYNAPTIC_DELAYS_CONFIG, 
+    "stdp": STDP_CONFIG,
+    "distance_connectivity": DISTANCE_CONNECTIVITY_CONFIG
+}
+
+# All presets combined
 ADVANCED_NETWORK_PRESETS = {
-    "realistic_cortex": {
-        "name": "Realistic Cortical Network",
-        "description": "Comprehensive model with Dale's principle, delays, STDP, and spatial organization",
-        "dales_principle": {
-            "enabled": True,
-            "excitatory_ratio": 0.8,
-            "exc_weight": 2.0,
-            "inh_weight": -6.0,
-            "exc_reversal": 0.0,
-            "inh_reversal": -70.0
-        },
-        "synaptic_delays": {
-            "enabled": True,
-            "delay_type": "normal",
-            "min_delay": 0.5,
-            "max_delay": 3.0,
-            "mean_delay": 1.2,
-            "delay_std": 0.4,
-            "conduction_velocity": 1.0
-        },
-        "stdp": {
-            "enabled": True,
-            "stdp_type": "additive",
-            "tau_pre": 20.0,
-            "tau_post": 20.0,
-            "A_plus": 0.01,
-            "A_minus": 0.0105,
-            "w_min": 0.0,
-            "w_max": 5.0
-        },
-        "distance_connectivity": {
-            "enabled": True,
-            "spatial_layout": "2d_grid",
-            "space_scale": 300.0,
-            "connection_function": "exponential",
-            "connection_length": 50.0,
-            "max_distance": 150.0,
-            "base_probability": 0.15,
-            "power_exponent": 2.0
-        }
-    },
-    "hippocampal_network": {
-        "name": "Hippocampal Network",
-        "description": "Hippocampus-inspired network with specialized STDP parameters",
-        "dales_principle": {
-            "enabled": True,
-            "excitatory_ratio": 0.85,
-            "exc_weight": 1.5,
-            "inh_weight": -4.5,
-            "exc_reversal": 0.0,
-            "inh_reversal": -75.0
-        },
-        "synaptic_delays": {
-            "enabled": True,
-            "delay_type": "exponential",
-            "min_delay": 0.3,
-            "max_delay": 2.0,
-            "mean_delay": 0.8,
-            "delay_std": 0.3,
-            "conduction_velocity": 1.5
-        },
-        "stdp": {
-            "enabled": True,
-            "stdp_type": "additive",
-            "tau_pre": 16.8,
-            "tau_post": 33.7,
-            "A_plus": 0.005,
-            "A_minus": 0.00525,
-            "w_min": 0.0,
-            "w_max": 3.0
-        },
-        "distance_connectivity": {
-            "enabled": True,
-            "spatial_layout": "2d_random",
-            "space_scale": 400.0,
-            "connection_function": "gaussian",
-            "connection_length": 60.0,
-            "max_distance": 180.0,
-            "base_probability": 0.1,
-            "power_exponent": 2.0
-        }
-    },
-    "development_network": {
-        "name": "Developmental Network",
-        "description": "Network suitable for studying neural development with homeostatic STDP",
-        "dales_principle": {
-            "enabled": True,
-            "excitatory_ratio": 0.75,
-            "exc_weight": 1.0,
-            "inh_weight": -3.0,
-            "exc_reversal": 0.0,
-            "inh_reversal": -70.0
-        },
-        "synaptic_delays": {
-            "enabled": True,
-            "delay_type": "uniform",
-            "min_delay": 0.8,
-            "max_delay": 2.5,
-            "mean_delay": 1.5,
-            "delay_std": 0.5,
-            "conduction_velocity": 0.8
-        },
-        "stdp": {
-            "enabled": True,
-            "stdp_type": "all_to_all",
-            "tau_pre": 25.0,
-            "tau_post": 25.0,
-            "A_plus": 0.008,
-            "A_minus": 0.0084,
-            "w_min": 0.0,
-            "w_max": 8.0
-        },
-        "distance_connectivity": {
-            "enabled": True,
-            "spatial_layout": "2d_grid",
-            "space_scale": 500.0,
-            "connection_function": "exponential",
-            "connection_length": 80.0,
-            "max_distance": 250.0,
-            "base_probability": 0.08,
-            "power_exponent": 1.8
-        }
-    }
+    "stdp": STDP_PRESETS,
+    "distance_connectivity": DISTANCE_CONNECTIVITY_PRESETS
 }

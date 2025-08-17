@@ -13,6 +13,8 @@ from sim_params_ui import create_simulation_parameters_group
 from sim_params import SimParamsManager
 from noise_options_ui import create_noise_options_group
 from noise_options import NoiseOptionsManager
+from input_patterns_ui import create_input_patterns_group
+from input_patterns_manager import InputPatternsManager
 from network_options_ui import create_network_options_group
 from network_options import NetworkOptionsManager
 from advanced_network_ui import create_advanced_network_group
@@ -23,6 +25,20 @@ from simulation_manager import SimulationManager
 from simulation_engine import SimulationEngine
 from results_manager import ResultsManager
 from code_generator import CodeGenerator
+from gap_junctions_ui import create_gap_junctions_group
+from gap_junctions_manager import GapJunctionsManager
+from neuromodulation_ui import create_neuromodulation_group
+from neuromodulation_manager import NeuromodulationManager
+from homeostatic_plasticity_ui import create_homeostatic_plasticity_group
+from homeostatic_plasticity_manager import HomeostaticPlasticityManager
+from multicompartment_ui import create_multicompartment_group
+from multicompartment_manager import MulticompartmentManager
+from calcium_dynamics_ui import create_calcium_dynamics_group
+from calcium_dynamics_manager import CalciumDynamicsManager
+from short_term_plasticity_ui import create_short_term_plasticity_group
+from short_term_plasticity_manager import ShortTermPlasticityManager
+from synaptic_receptors_ui import create_synaptic_receptors_group
+from synaptic_receptors_manager import SynapticReceptorsManager
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -33,8 +49,16 @@ class MainWindow(QMainWindow):
         self.neuron_models_manager = NeuronModelsManager(self)
         self.sim_params_manager = SimParamsManager(self)
         self.noise_options_manager = NoiseOptionsManager(self)
+        self.input_patterns_manager = InputPatternsManager(self)
         self.network_options_manager = NetworkOptionsManager(self)
         self.advanced_network_manager = AdvancedNetworkManager(self)
+        self.gap_junctions_manager = GapJunctionsManager(self)
+        self.neuromodulation_manager = NeuromodulationManager(self)
+        self.homeostatic_plasticity_manager = HomeostaticPlasticityManager(self)
+        self.multicompartment_manager = MulticompartmentManager(self)
+        self.calcium_dynamics_manager = CalciumDynamicsManager(self)
+        self.short_term_plasticity_manager = ShortTermPlasticityManager(self)
+        self.synaptic_receptors_manager = SynapticReceptorsManager(self)
         
         # Initialize simulation components
         self.simulation_engine = SimulationEngine()
@@ -144,8 +168,15 @@ class MainWindow(QMainWindow):
         self.neuron_models_manager.connect_signals()
         self.sim_params_manager.connect_signals()
         self.noise_options_manager.connect_signals()
+        self.input_patterns_manager.connect_signals()
         self.network_options_manager.connect_signals()
         self.advanced_network_manager.connect_signals()
+        self.neuromodulation_manager.connect_signals()
+        self.homeostatic_plasticity_manager.connect_signals()
+        self.multicompartment_manager.connect_signals()
+        self.calcium_dynamics_manager.connect_signals()
+        self.short_term_plasticity_manager.connect_signals()
+        self.synaptic_receptors_manager.connect_signals()
         
         # Connect simulation components
         self.simulation_manager.set_components(
@@ -202,6 +233,10 @@ class MainWindow(QMainWindow):
         noise_options_group = create_noise_options_group(self)
         main_tab_layout.addWidget(noise_options_group)
 
+        # --- Input Patterns ---
+        input_patterns_group = create_input_patterns_group(self)
+        main_tab_layout.addWidget(input_patterns_group)
+
         # --- Network Options ---
         network_options_group = create_network_options_group(self)
         main_tab_layout.addWidget(network_options_group)
@@ -220,6 +255,62 @@ class MainWindow(QMainWindow):
         # --- Simulation Tab ---
         simulation_tab = create_simulation_tab(self)
         self.tabs.addTab(simulation_tab, "Simulation")
+        
+        # --- Gap Junctions Tab ---
+        gap_junctions_group = create_gap_junctions_group(self)
+        gap_junctions_scroll = QScrollArea()
+        gap_junctions_scroll.setWidgetResizable(True)
+        gap_junctions_scroll.setFrameStyle(QFrame.Shape.NoFrame)
+        gap_junctions_scroll.setWidget(gap_junctions_group)
+        self.tabs.addTab(gap_junctions_scroll, "Gap Junctions")
+        
+        # --- Synaptic Receptors Tab ---
+        synaptic_receptors_group = create_synaptic_receptors_group(self)
+        synaptic_receptors_scroll = QScrollArea()
+        synaptic_receptors_scroll.setWidgetResizable(True)
+        synaptic_receptors_scroll.setFrameStyle(QFrame.Shape.NoFrame)
+        synaptic_receptors_scroll.setWidget(synaptic_receptors_group)
+        self.tabs.addTab(synaptic_receptors_scroll, "Synaptic Receptors")
+        
+        # --- Calcium Dynamics Tab ---
+        calcium_dynamics_group = create_calcium_dynamics_group(self)
+        calcium_dynamics_scroll = QScrollArea()
+        calcium_dynamics_scroll.setWidgetResizable(True)
+        calcium_dynamics_scroll.setFrameStyle(QFrame.Shape.NoFrame)
+        calcium_dynamics_scroll.setWidget(calcium_dynamics_group)
+        self.tabs.addTab(calcium_dynamics_scroll, "Calcium Dynamics")
+        
+        # --- Short-Term Plasticity Tab ---
+        short_term_plasticity_group = create_short_term_plasticity_group(self)
+        short_term_plasticity_scroll = QScrollArea()
+        short_term_plasticity_scroll.setWidgetResizable(True)
+        short_term_plasticity_scroll.setFrameStyle(QFrame.Shape.NoFrame)
+        short_term_plasticity_scroll.setWidget(short_term_plasticity_group)
+        self.tabs.addTab(short_term_plasticity_scroll, "Short-Term Plasticity")
+        
+        # --- Homeostatic Plasticity Tab ---
+        homeostatic_plasticity_group = create_homeostatic_plasticity_group(self)
+        homeostatic_plasticity_scroll = QScrollArea()
+        homeostatic_plasticity_scroll.setWidgetResizable(True)
+        homeostatic_plasticity_scroll.setFrameStyle(QFrame.Shape.NoFrame)
+        homeostatic_plasticity_scroll.setWidget(homeostatic_plasticity_group)
+        self.tabs.addTab(homeostatic_plasticity_scroll, "Homeostatic Plasticity")
+        
+        # --- Neuromodulation Tab ---
+        neuromodulation_group = create_neuromodulation_group(self)
+        neuromodulation_scroll = QScrollArea()
+        neuromodulation_scroll.setWidgetResizable(True)
+        neuromodulation_scroll.setFrameStyle(QFrame.Shape.NoFrame)
+        neuromodulation_scroll.setWidget(neuromodulation_group)
+        self.tabs.addTab(neuromodulation_scroll, "Neuromodulation")
+        
+        # --- Multi-Compartment Tab ---
+        multicompartment_group = create_multicompartment_group(self)
+        multicompartment_scroll = QScrollArea()
+        multicompartment_scroll.setWidgetResizable(True)
+        multicompartment_scroll.setFrameStyle(QFrame.Shape.NoFrame)
+        multicompartment_scroll.setWidget(multicompartment_group)
+        self.tabs.addTab(multicompartment_scroll, "Multi-Compartment")
         
         # Set initial tab
         self.tabs.setCurrentIndex(0)
@@ -272,7 +363,10 @@ class MainWindow(QMainWindow):
                 # 3. Load noise options
                 self.noise_options_manager.load_noise_options(config_data.get("noise", {}))
                 
-                # 4. Load network options
+                # 4. Load input patterns
+                self.input_patterns_manager.load_input_patterns_config(config_data.get("input_patterns", {}))
+                
+                # 5. Load network options
                 self.network_options_manager.load_network_options(config_data.get("network", {}))
                 
                 # 5. Load advanced network options
@@ -286,6 +380,7 @@ class MainWindow(QMainWindow):
                 "neuron_model": self.neuron_models_manager.get_neuron_model_config(),
                 "simulation": self.sim_params_manager.get_sim_params_config(),
                 "noise": self.noise_options_manager.get_noise_options_config(),
+                "input_patterns": self.input_patterns_manager.get_input_patterns_config(),
                 "network": self.network_options_manager.get_network_options_config(),
                 "advanced_network": self.advanced_network_manager.get_advanced_network_config()
             }

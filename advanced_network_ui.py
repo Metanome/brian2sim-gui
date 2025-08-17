@@ -3,24 +3,17 @@ Advanced Network Features UI Components for Brian2 neural network simulator.
 Creates UI elements for Dale's principle, synaptic delays, STDP, and distance-dependent connectivity.
 """
 
-from PyQt6.QtWidgets import (
-    QGroupBox, QVBoxLayout, QHBoxLayout, QCheckBox, QLabel, QDoubleSpinBox, 
-    QComboBox, QWidget, QFormLayout, QSpinBox, QPushButton, QTabWidget,
-    QScrollArea, QFrame
-)
+from PyQt6.QtWidgets import QGroupBox, QVBoxLayout, QTabWidget, QHBoxLayout, QLabel, QComboBox, QWidget
 from PyQt6.QtCore import Qt
+from ui_forms import AdvancedNetworkFormGenerator
 from advanced_network_config import (
-    DALES_PRINCIPLE_CONFIG,
-    SYNAPTIC_DELAYS_CONFIG,
-    STDP_CONFIG,
-    DISTANCE_CONNECTIVITY_CONFIG,
-    STDP_PRESETS,
-    DISTANCE_CONNECTIVITY_PRESETS
+    ADVANCED_NETWORK_CONFIG,
+    ADVANCED_NETWORK_PRESETS
 )
 
 def create_advanced_network_group(main_window):
     """
-    Creates the 'Advanced Network Features' group box with all four major features.
+    Creates the 'Advanced Network Features' group box using config-driven approach.
     """
     advanced_group = QGroupBox("Advanced Network Features")
     advanced_group.setToolTip(
@@ -38,347 +31,143 @@ def create_advanced_network_group(main_window):
     tabs = QTabWidget()
     main_layout.addWidget(tabs)
     
-    # Dale's Principle Tab
-    dales_tab = create_dales_principle_tab(main_window)
-    tabs.addTab(dales_tab, "Dale's Principle")
+    # Initialize storage for form generators and widgets
+    main_window.advanced_form_generators = {}
+    main_window.advanced_feature_widgets = {}
     
-    # Synaptic Delays Tab
-    delays_tab = create_synaptic_delays_tab(main_window)
-    tabs.addTab(delays_tab, "Synaptic Delays")
+    # Define tab configuration
+    tab_configs = [
+        ("dales_principle", "Dale's Principle", "dales_principle"), 
+        ("synaptic_delays", "Synaptic Delays", "synaptic_delays"),
+        ("stdp", "STDP", "stdp"),
+        ("distance_connectivity", "Spatial Connectivity", "distance_connectivity")
+    ]
     
-    # STDP Tab
-    stdp_tab = create_stdp_tab(main_window)
-    tabs.addTab(stdp_tab, "STDP")
-    
-    # Distance Connectivity Tab
-    distance_tab = create_distance_connectivity_tab(main_window)
-    tabs.addTab(distance_tab, "Spatial Connectivity")
+    # Create tabs using config-driven approach
+    for config_key, tab_title, feature_name in tab_configs:
+        if config_key in ADVANCED_NETWORK_CONFIG:
+            tab_widget = create_feature_tab(main_window, config_key, feature_name)
+            tabs.addTab(tab_widget, tab_title)
     
     return advanced_group
 
-def create_dales_principle_tab(main_window):
-    """Create Dale's Principle configuration tab."""
+def create_feature_tab(main_window, config_key, feature_name):
+    """
+    Create a tab for an advanced network feature using config-driven approach.
+    """
     tab = QWidget()
     layout = QVBoxLayout(tab)
     
-    # Enable checkbox
-    main_window.dales_principle_checkbox = QCheckBox("Enable Dale's Principle")
-    main_window.dales_principle_checkbox.setToolTip(
-        "Separate neurons into excitatory (positive weights) and inhibitory (negative weights) populations. "
-        "This fundamental principle states that each neuron releases the same neurotransmitter at all synapses."
-    )
-    layout.addWidget(main_window.dales_principle_checkbox)
+    # Get configuration for this feature
+    feature_config = ADVANCED_NETWORK_CONFIG[config_key]
     
-    # Parameters group
-    main_window.dales_principle_params_group = QWidget()
-    params_layout = QFormLayout(main_window.dales_principle_params_group)
-    layout.addWidget(main_window.dales_principle_params_group)
+    # Create form generator
+    form_generator = AdvancedNetworkFormGenerator({config_key: feature_config})
+    main_window.advanced_form_generators[feature_name] = form_generator
     
-    # Create parameter widgets
-    main_window.dales_principle_forms = {"params": {}}
-    
-    for param_key, param_config in DALES_PRINCIPLE_CONFIG.items():
-        if param_key == "enabled":
-            continue
-            
-        label = QLabel(param_config["label"])
-        widget = None
+    # Get the form widget
+    form_widget = form_generator.get_form_widget(config_key)
+    if form_widget:
+        layout.addWidget(form_widget)
         
-        if param_config["type"] == "double":
-            widget = QDoubleSpinBox()
-            widget.setDecimals(3)
-            widget.setMinimum(param_config.get("min", -1000.0))
-            widget.setMaximum(param_config.get("max", 1000.0))
-            widget.setSingleStep(param_config.get("step", 0.1))
-            widget.setValue(param_config["default"])
-        elif param_config["type"] == "int":
-            widget = QSpinBox()
-            widget.setMinimum(param_config.get("min", 0))
-            widget.setMaximum(param_config.get("max", 1000))
-            widget.setSingleStep(param_config.get("step", 1))
-            widget.setValue(param_config["default"])
-        elif param_config["type"] == "bool":
-            widget = QCheckBox()
-            widget.setChecked(param_config["default"])
-            
-        if widget:
-            widget.setToolTip(param_config.get("tooltip", ""))
-            params_layout.addRow(label, widget)
-            main_window.dales_principle_forms["params"][param_key] = widget
+        # Store widget references for backward compatibility
+        param_widgets = form_generator.get_param_widgets(config_key)
+        main_window.advanced_feature_widgets[feature_name] = param_widgets
+        
+        # Store specific widget references for each feature
+        _store_widget_references(main_window, feature_name, param_widgets, form_generator)
     
-    # Connect signals
-    main_window.dales_principle_checkbox.stateChanged.connect(
-        main_window.advanced_network_manager.toggle_dales_principle_visibility
-    )
-    
-    # Initial visibility
-    main_window.dales_principle_params_group.setVisible(False)
+    # Add presets if available (but skip for STDP and distance_connectivity to keep things simple)
+    if feature_name in ADVANCED_NETWORK_PRESETS and feature_name not in ["stdp", "distance_connectivity"]:
+        preset_layout = create_preset_section(main_window, feature_name, form_generator)
+        layout.insertLayout(0, preset_layout)  # Insert at top
     
     layout.addStretch()
     return tab
 
-def create_synaptic_delays_tab(main_window):
-    """Create Synaptic Delays configuration tab."""
-    tab = QWidget()
-    layout = QVBoxLayout(tab)
+def create_preset_section(main_window, feature_name, form_generator):
+    """Create preset selection section for features that support it."""
+    preset_layout = QHBoxLayout()
     
-    # Enable checkbox
-    main_window.synaptic_delays_checkbox = QCheckBox("Enable Synaptic Delays")
-    main_window.synaptic_delays_checkbox.setToolTip(
-        "Add realistic time delays to synaptic transmission. "
-        "Accounts for axonal conduction time and synaptic processing delays."
+    preset_label = QLabel(f"{feature_name.replace('_', ' ').title()} Presets:")
+    preset_combo = QComboBox()
+    preset_combo.addItem("-- Select Preset --", None)
+    
+    # Add presets from configuration
+    presets = ADVANCED_NETWORK_PRESETS[feature_name]
+    for preset_key, preset_info in presets.items():
+        preset_combo.addItem(preset_info["name"], preset_key)
+    
+    # Connect preset selection
+    preset_combo.currentIndexChanged.connect(
+        lambda index: apply_preset_if_selected(main_window, feature_name, preset_combo, form_generator)
     )
-    layout.addWidget(main_window.synaptic_delays_checkbox)
     
-    # Parameters group
-    main_window.synaptic_delays_params_group = QWidget()
-    params_layout = QFormLayout(main_window.synaptic_delays_params_group)
-    layout.addWidget(main_window.synaptic_delays_params_group)
+    preset_layout.addWidget(preset_label)
+    preset_layout.addWidget(preset_combo)
+    preset_layout.addStretch()
     
-    # Create parameter widgets
-    main_window.synaptic_delays_forms = {"params": {}, "labels": {}}
+    # Store reference
+    if not hasattr(main_window, 'advanced_preset_combos'):
+        main_window.advanced_preset_combos = {}
+    main_window.advanced_preset_combos[feature_name] = preset_combo
     
-    for param_key, param_config in SYNAPTIC_DELAYS_CONFIG.items():
-        if param_key == "enabled":
-            continue
-            
-        label = QLabel(param_config["label"])
-        widget = None
+    return preset_layout
+
+def apply_preset_if_selected(main_window, feature_name, preset_combo, form_generator):
+    """Apply preset values if a valid preset is selected."""
+    preset_key = preset_combo.currentData()
+    if preset_key and hasattr(main_window, 'advanced_network_manager'):
+        # Call appropriate preset method based on feature
+        if feature_name == "stdp":
+            main_window.advanced_network_manager.apply_stdp_preset(preset_key)
+        elif feature_name == "distance_connectivity":
+            main_window.advanced_network_manager.apply_distance_connectivity_preset(preset_key)
+
+def _store_widget_references(main_window, feature_name, param_widgets, form_generator):
+    """Store widget references for backward compatibility with existing manager code."""
+    
+    if feature_name == "dales_principle":
+        main_window.dales_principle_checkbox = param_widgets.get("enabled")
+        main_window.excitatory_ratio_input = param_widgets.get("excitatory_ratio") 
+        main_window.exc_weight_input = param_widgets.get("exc_weight")
+        main_window.inh_weight_input = param_widgets.get("inh_weight")
         
-        if param_config["type"] == "double":
-            widget = QDoubleSpinBox()
-            widget.setDecimals(3)
-            widget.setMinimum(param_config.get("min", 0.0))
-            widget.setMaximum(param_config.get("max", 1000.0))
-            widget.setSingleStep(param_config.get("step", 0.1))
-            widget.setValue(param_config["default"])
-        elif param_config["type"] == "combo":
-            widget = QComboBox()
-            # Use display_options if available, otherwise fall back to options
-            if "display_options" in param_config:
-                widget.addItems(param_config["display_options"])
-                # Set current index based on default value in options
-                try:
-                    default_index = param_config["options"].index(param_config["default"])
-                    widget.setCurrentIndex(default_index)
-                except (ValueError, KeyError):
-                    widget.setCurrentText(param_config["default"])
-            else:
-                widget.addItems(param_config["options"])
-                widget.setCurrentText(param_config["default"])
-            
-        if widget:
-            widget.setToolTip(param_config.get("tooltip", ""))
-            params_layout.addRow(label, widget)
-            main_window.synaptic_delays_forms["params"][param_key] = widget
-            main_window.synaptic_delays_forms["labels"][param_key] = label
-    
-    # Connect signals
-    main_window.synaptic_delays_checkbox.stateChanged.connect(
-        main_window.advanced_network_manager.toggle_synaptic_delays_visibility
-    )
-      # Connect delay type change to update parameter visibility
-    if "delay_type" in main_window.synaptic_delays_forms["params"]:
-        main_window.synaptic_delays_forms["params"]["delay_type"].currentIndexChanged.connect(
-            main_window.advanced_network_manager.update_delay_params_visibility
-        )
-    
-    # Initial visibility
-    main_window.synaptic_delays_params_group.setVisible(False)
-    
-    # Set initial parameter visibility based on default delay type
-    if hasattr(main_window, 'advanced_network_manager'):
-        main_window.advanced_network_manager.update_delay_params_visibility(0)
-    
-    layout.addStretch()
-    return tab
-
-def create_stdp_tab(main_window):
-    """Create STDP configuration tab."""
-    tab = QWidget()
-    layout = QVBoxLayout(tab)
-    
-    # Enable checkbox
-    main_window.stdp_checkbox = QCheckBox("Enable STDP (Spike-Timing Dependent Plasticity)")
-    main_window.stdp_checkbox.setToolTip(
-        "Enable spike-timing dependent plasticity where synaptic weights change "
-        "based on the relative timing of pre- and post-synaptic spikes."
-    )
-    layout.addWidget(main_window.stdp_checkbox)
-    
-    # STDP Presets
-    presets_layout = QHBoxLayout()
-    presets_label = QLabel("STDP Presets:")
-    main_window.stdp_presets_combo = QComboBox()
-    main_window.stdp_presets_combo.addItem("Select preset...", None)
-    for preset_key, preset_info in STDP_PRESETS.items():
-        main_window.stdp_presets_combo.addItem(preset_info["name"], preset_key)
-    
-    presets_layout.addWidget(presets_label)
-    presets_layout.addWidget(main_window.stdp_presets_combo)
-    presets_layout.addStretch()
-    layout.addLayout(presets_layout)
-    
-    # Parameters group
-    main_window.stdp_params_group = QWidget()
-    params_layout = QFormLayout(main_window.stdp_params_group)
-    layout.addWidget(main_window.stdp_params_group)
-    
-    # Create parameter widgets
-    main_window.stdp_forms = {"params": {}, "labels": {}}
-    
-    for param_key, param_config in STDP_CONFIG.items():
-        if param_key == "enabled":
-            continue
-            
-        label = QLabel(param_config["label"])
-        widget = None
+    elif feature_name == "synaptic_delays":
+        main_window.synaptic_delays_checkbox = param_widgets.get("enabled")
+        main_window.delay_type_combo = param_widgets.get("delay_type")
+        main_window.min_delay_input = param_widgets.get("min_delay")
+        main_window.max_delay_input = param_widgets.get("max_delay")
+        main_window.delay_mean_input = param_widgets.get("delay_mean")
+        main_window.delay_std_input = param_widgets.get("delay_std")
+        main_window.delay_tau_input = param_widgets.get("delay_tau")
+        main_window.conduction_velocity_input = param_widgets.get("conduction_velocity")
+        main_window.distance_scale_input = param_widgets.get("distance_scale")
         
-        if param_config["type"] == "double":
-            widget = QDoubleSpinBox()
-            widget.setDecimals(6)  # Higher precision for STDP parameters
-            widget.setMinimum(param_config.get("min", 0.0))
-            widget.setMaximum(param_config.get("max", 1000.0))
-            widget.setSingleStep(param_config.get("step", 0.001))
-            widget.setValue(param_config["default"])
-        elif param_config["type"] == "combo":
-            widget = QComboBox()
-            # Use display_options if available, otherwise fall back to options
-            if "display_options" in param_config:
-                widget.addItems(param_config["display_options"])
-                # Set current index based on default value in options
-                try:
-                    default_index = param_config["options"].index(param_config["default"])
-                    widget.setCurrentIndex(default_index)
-                except (ValueError, KeyError):
-                    widget.setCurrentText(param_config["default"])
-            else:
-                widget.addItems(param_config["options"])
-                widget.setCurrentText(param_config["default"])
-            
-        if widget:
-            widget.setToolTip(param_config.get("tooltip", ""))
-            params_layout.addRow(label, widget)
-            main_window.stdp_forms["params"][param_key] = widget
-            main_window.stdp_forms["labels"][param_key] = label    # Connect signals
-    main_window.stdp_checkbox.stateChanged.connect(
-        main_window.advanced_network_manager.toggle_stdp_visibility
-    )
-    
-    # Connect STDP type change to update parameter visibility
-    if "stdp_type" in main_window.stdp_forms["params"]:
-        main_window.stdp_forms["params"]["stdp_type"].currentIndexChanged.connect(
-            main_window.advanced_network_manager.update_stdp_params_visibility
-        )
-    
-    # Connect preset selection to auto-apply
-    main_window.stdp_presets_combo.currentIndexChanged.connect(
-        lambda: main_window.advanced_network_manager.apply_stdp_preset(
-            main_window.stdp_presets_combo.currentData()
-        ) if main_window.stdp_presets_combo.currentData() else None
-    )
-    
-    # Initial visibility
-    main_window.stdp_params_group.setVisible(False)
-    
-    layout.addStretch()
-    return tab
-
-def create_distance_connectivity_tab(main_window):
-    """Create Distance-Dependent Connectivity configuration tab."""
-    tab = QWidget()
-    layout = QVBoxLayout(tab)
-    
-    # Enable checkbox
-    main_window.distance_connectivity_checkbox = QCheckBox("Enable Distance-Dependent Connectivity")
-    main_window.distance_connectivity_checkbox.setToolTip(
-        "Connection probability depends on spatial distance between neurons. "
-        "Models realistic spatial organization of neural circuits."
-    )
-    layout.addWidget(main_window.distance_connectivity_checkbox)
-    
-    # Distance Connectivity Presets
-    presets_layout = QHBoxLayout()
-    presets_label = QLabel("Connectivity Presets:")
-    main_window.distance_presets_combo = QComboBox()
-    main_window.distance_presets_combo.addItem("Select preset...", None)
-    for preset_key, preset_info in DISTANCE_CONNECTIVITY_PRESETS.items():
-        main_window.distance_presets_combo.addItem(preset_info["name"], preset_key)
-    
-    presets_layout.addWidget(presets_label)
-    presets_layout.addWidget(main_window.distance_presets_combo)
-    presets_layout.addStretch()
-    layout.addLayout(presets_layout)
-    
-    # Parameters group
-    main_window.distance_connectivity_params_group = QWidget()
-    params_layout = QFormLayout(main_window.distance_connectivity_params_group)
-    layout.addWidget(main_window.distance_connectivity_params_group)
-    
-    # Create parameter widgets
-    main_window.distance_connectivity_forms = {"params": {}, "labels": {}}
-    
-    for param_key, param_config in DISTANCE_CONNECTIVITY_CONFIG.items():
-        if param_key == "enabled":
-            continue
-            
-        label = QLabel(param_config["label"])
-        widget = None
+    elif feature_name == "stdp":
+        main_window.stdp_checkbox = param_widgets.get("enabled")
+        main_window.stdp_type_combo = param_widgets.get("stdp_type")
+        main_window.A_plus_input = param_widgets.get("A_plus")
+        main_window.A_minus_input = param_widgets.get("A_minus")
+        main_window.tau_plus_input = param_widgets.get("tau_plus")
+        main_window.tau_minus_input = param_widgets.get("tau_minus")
+        main_window.w_max_input = param_widgets.get("w_max")
+        main_window.w_min_input = param_widgets.get("w_min")
         
-        if param_config["type"] == "double":
-            widget = QDoubleSpinBox()
-            widget.setDecimals(3)
-            widget.setMinimum(param_config.get("min", 0.0))
-            widget.setMaximum(param_config.get("max", 10000.0))
-            widget.setSingleStep(param_config.get("step", 0.1))
-            widget.setValue(param_config["default"])
-        elif param_config["type"] == "combo":
-            widget = QComboBox()
-            # Use display_options if available, otherwise fall back to options
-            if "display_options" in param_config:
-                widget.addItems(param_config["display_options"])
-                # Set current index based on default value in options
-                try:
-                    default_index = param_config["options"].index(param_config["default"])
-                    widget.setCurrentIndex(default_index)
-                except (ValueError, KeyError):
-                    widget.setCurrentText(param_config["default"])
-            else:
-                widget.addItems(param_config["options"])
-                widget.setCurrentText(param_config["default"])
-            
-        if widget:
-            widget.setToolTip(param_config.get("tooltip", ""))
-            params_layout.addRow(label, widget)
-            main_window.distance_connectivity_forms["params"][param_key] = widget
-            main_window.distance_connectivity_forms["labels"][param_key] = label
-    
-    # Connect signals
-    main_window.distance_connectivity_checkbox.stateChanged.connect(
-        main_window.advanced_network_manager.toggle_distance_connectivity_visibility
-    )
-    
-    # Connect function type change to update parameter visibility
-    if "connection_function" in main_window.distance_connectivity_forms["params"]:
-        main_window.distance_connectivity_forms["params"]["connection_function"].currentIndexChanged.connect(
-            main_window.advanced_network_manager.update_distance_params_visibility
-        )
-    
-    # Connect preset selection to auto-apply
-    main_window.distance_presets_combo.currentIndexChanged.connect(
-        lambda: main_window.advanced_network_manager.apply_distance_connectivity_preset(
-            main_window.distance_presets_combo.currentData()
-        ) if main_window.distance_presets_combo.currentData() else None
-    )
-    
-    # Initial visibility
-    main_window.distance_connectivity_params_group.setVisible(False)
-    
-    # Set initial parameter visibility based on default connection function
-    if hasattr(main_window, 'advanced_network_manager'):
-        main_window.advanced_network_manager.update_distance_params_visibility(0)
-    
-    layout.addStretch()
-    return tab
-
-
+        # Store preset combo reference
+        if hasattr(main_window, 'advanced_preset_combos') and feature_name in main_window.advanced_preset_combos:
+            main_window.stdp_preset_combo = main_window.advanced_preset_combos[feature_name]
+        
+    elif feature_name == "distance_connectivity":
+        main_window.distance_connectivity_checkbox = param_widgets.get("enabled")
+        main_window.distance_profile_combo = param_widgets.get("distance_profile")
+        main_window.spatial_scale_input = param_widgets.get("spatial_scale")
+        main_window.max_distance_input = param_widgets.get("max_distance")
+        main_window.gaussian_sigma_input = param_widgets.get("gaussian_sigma")
+        main_window.exponential_lambda_input = param_widgets.get("exponential_lambda")
+        main_window.power_law_alpha_input = param_widgets.get("power_law_alpha")
+        main_window.power_law_beta_input = param_widgets.get("power_law_beta")
+        
+        # Store preset combo reference
+        if hasattr(main_window, 'advanced_preset_combos') and feature_name in main_window.advanced_preset_combos:
+            main_window.distance_preset_combo = main_window.advanced_preset_combos[feature_name]
