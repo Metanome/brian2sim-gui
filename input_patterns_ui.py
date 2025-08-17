@@ -4,37 +4,43 @@ Creates user interface for configuring various input stimulation patterns.
 """
 
 from PyQt6.QtWidgets import QGroupBox, QVBoxLayout, QWidget
-from ui_forms import BaseFormGenerator
+from ui_forms import InputPatternsFormGenerator
 from input_patterns_config import INPUT_PATTERNS_CONFIG
 
 def create_input_patterns_group(main_window):
-    """Create and return the input patterns configuration group."""
-    group = QGroupBox("Input Patterns")
-    layout = QVBoxLayout(group)
+    """
+    Creates the 'Input Patterns' group box using config-driven approach.
+    """
+    input_patterns_group = QGroupBox("Input Patterns")
+    input_patterns_group.setToolTip("Configure external input stimulation patterns for realistic neural network simulations.")
     
-    # Create form using the base form generator
-    form_generator = InputPatternsFormGenerator(INPUT_PATTERNS_CONFIG)
-    form_widget = form_generator.get_form_widget()
+    # Create form generator
+    main_window.input_patterns_form_generator = InputPatternsFormGenerator(INPUT_PATTERNS_CONFIG)
+    
+    # Get the form widget and set it as the layout
+    form_widget = main_window.input_patterns_form_generator.get_form_widget()
     if form_widget:
-        layout.addWidget(form_widget)
-    
-    # Store form generator reference
-    main_window.input_patterns_form_generator = form_generator
-    
-    return group
-
-class InputPatternsFormGenerator(BaseFormGenerator):
-    """Form generator for input patterns configuration."""
-    
-    def __init__(self, config):
-        super().__init__(config)
+        input_patterns_group.setLayout(form_widget.layout())
         
-    def _create_forms(self):
-        """Create input patterns configuration forms."""
-        # Create a simple placeholder form to prevent errors
-        main_widget = QWidget()
-        main_layout = QVBoxLayout(main_widget)
+        # Store references to specific widgets for backward compatibility
+        param_widgets = main_window.input_patterns_form_generator.get_param_widgets()
+        main_window.input_patterns_enabled = param_widgets.get("enabled")
+        main_window.input_pattern_type = param_widgets.get("pattern_type")
+        main_window.poisson_rate_input = param_widgets.get("poisson_rate")
+        main_window.poisson_weight_input = param_widgets.get("poisson_weight")
+        main_window.rhythmic_frequency_input = param_widgets.get("rhythmic_frequency")
+        main_window.rhythmic_amplitude_input = param_widgets.get("rhythmic_amplitude")
+        main_window.burst_rate_input = param_widgets.get("burst_rate")
+        main_window.burst_duration_input = param_widgets.get("burst_duration")
+        main_window.step_amplitude_input = param_widgets.get("step_amplitude")
+        main_window.step_start_time_input = param_widgets.get("step_start_time")
+        main_window.step_duration_input = param_widgets.get("step_duration")
         
-        # Store the form widget properly (not as a dictionary)
-        self.forms["main"] = main_widget
-        self.param_widgets["main"] = {}
+        # Store forms for manager access
+        main_window.input_patterns_forms = param_widgets
+    else:
+        # Fallback layout if form generation fails
+        fallback_layout = QVBoxLayout(input_patterns_group)
+        fallback_layout.addWidget(QWidget())  # Empty placeholder
+    
+    return input_patterns_group

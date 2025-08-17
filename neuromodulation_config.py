@@ -4,7 +4,7 @@
 
 NEUROMODULATION_CONFIG = {
     'enabled': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': False,
         'label': 'Enable Neuromodulation',
         'tooltip': 'Enable neuromodulation systems (dopamine, acetylcholine, etc.)'
@@ -12,14 +12,14 @@ NEUROMODULATION_CONFIG = {
     
     # Dopaminergic system
     'dopamine_system': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': True,
         'label': 'Dopamine System',
         'tooltip': 'Enable dopaminergic neuromodulation'
     },
     
     'dopamine_baseline': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 0.1,  # μM
         'min': 0.0,
         'max': 1.0,
@@ -30,7 +30,7 @@ NEUROMODULATION_CONFIG = {
     },
     
     'dopamine_release_rate': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 0.01,  # μM/ms
         'min': 0.0,
         'max': 0.1,
@@ -41,7 +41,7 @@ NEUROMODULATION_CONFIG = {
     },
     
     'dopamine_clearance_tau': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 1000.0,  # ms
         'min': 100.0,
         'max': 10000.0,
@@ -52,7 +52,7 @@ NEUROMODULATION_CONFIG = {
     },
     
     'dopamine_d1_effect': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 0.2,
         'min': 0.0,
         'max': 2.0,
@@ -62,7 +62,7 @@ NEUROMODULATION_CONFIG = {
     },
     
     'dopamine_d2_effect': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': -0.15,
         'min': -2.0,
         'max': 0.0,
@@ -73,14 +73,14 @@ NEUROMODULATION_CONFIG = {
     
     # Cholinergic system
     'acetylcholine_system': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': True,
         'label': 'Acetylcholine System',
         'tooltip': 'Enable cholinergic neuromodulation'
     },
     
     'acetylcholine_baseline': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 0.05,  # μM
         'min': 0.0,
         'max': 0.5,
@@ -91,7 +91,7 @@ NEUROMODULATION_CONFIG = {
     },
     
     'acetylcholine_release_rate': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 0.005,  # μM/ms
         'min': 0.0,
         'max': 0.05,
@@ -102,7 +102,7 @@ NEUROMODULATION_CONFIG = {
     },
     
     'acetylcholine_clearance_tau': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 200.0,  # ms
         'min': 50.0,
         'max': 2000.0,
@@ -113,7 +113,7 @@ NEUROMODULATION_CONFIG = {
     },
     
     'nicotinic_effect': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 0.3,
         'min': 0.0,
         'max': 2.0,
@@ -123,7 +123,7 @@ NEUROMODULATION_CONFIG = {
     },
     
     'muscarinic_effect': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 0.15,
         'min': 0.0,
         'max': 1.0,
@@ -134,14 +134,14 @@ NEUROMODULATION_CONFIG = {
     
     # Serotonergic system
     'serotonin_system': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': False,
         'label': 'Serotonin System',
         'tooltip': 'Enable serotonergic neuromodulation'
     },
     
     'serotonin_baseline': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 0.02,  # μM
         'min': 0.0,
         'max': 0.2,
@@ -152,7 +152,7 @@ NEUROMODULATION_CONFIG = {
     },
     
     'serotonin_release_rate': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 0.002,  # μM/ms
         'min': 0.0,
         'max': 0.02,
@@ -163,7 +163,7 @@ NEUROMODULATION_CONFIG = {
     },
     
     'serotonin_clearance_tau': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 500.0,  # ms
         'min': 100.0,
         'max': 5000.0,
@@ -174,7 +174,7 @@ NEUROMODULATION_CONFIG = {
     },
     
     '5ht1a_effect': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': -0.1,
         'min': -1.0,
         'max': 0.0,
@@ -184,7 +184,7 @@ NEUROMODULATION_CONFIG = {
     },
     
     '5ht2a_effect': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 0.15,
         'min': 0.0,
         'max': 1.0,
@@ -195,14 +195,14 @@ NEUROMODULATION_CONFIG = {
     
     # Noradrenergic system
     'noradrenaline_system': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': False,
         'label': 'Noradrenaline System',
         'tooltip': 'Enable noradrenergic neuromodulation'
     },
     
     'noradrenaline_baseline': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 0.03,  # μM
         'min': 0.0,
         'max': 0.3,
@@ -213,7 +213,7 @@ NEUROMODULATION_CONFIG = {
     },
     
     'noradrenaline_release_rate': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 0.003,  # μM/ms
         'min': 0.0,
         'max': 0.03,
@@ -224,7 +224,7 @@ NEUROMODULATION_CONFIG = {
     },
     
     'noradrenaline_clearance_tau': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 800.0,  # ms
         'min': 100.0,
         'max': 8000.0,
@@ -235,7 +235,7 @@ NEUROMODULATION_CONFIG = {
     },
     
     'alpha1_effect': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 0.2,
         'min': 0.0,
         'max': 1.0,
@@ -245,7 +245,7 @@ NEUROMODULATION_CONFIG = {
     },
     
     'alpha2_effect': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': -0.1,
         'min': -1.0,
         'max': 0.0,
@@ -255,7 +255,7 @@ NEUROMODULATION_CONFIG = {
     },
     
     'beta_effect': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 0.15,
         'min': 0.0,
         'max': 1.0,
@@ -274,7 +274,7 @@ NEUROMODULATION_CONFIG = {
     },
     
     'activity_threshold': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 20.0,  # Hz
         'min': 1.0,
         'max': 100.0,
@@ -285,7 +285,7 @@ NEUROMODULATION_CONFIG = {
     },
     
     'release_duration': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 2000.0,  # ms
         'min': 100.0,
         'max': 10000.0,
@@ -296,7 +296,7 @@ NEUROMODULATION_CONFIG = {
     },
     
     'release_interval': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 10000.0,  # ms
         'min': 1000.0,
         'max': 60000.0,
@@ -308,28 +308,28 @@ NEUROMODULATION_CONFIG = {
     
     # Effects on neural properties
     'affect_excitability': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': True,
         'label': 'Affect Neural Excitability',
         'tooltip': 'Neuromodulators affect intrinsic excitability'
     },
     
     'affect_synaptic_transmission': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': True,
         'label': 'Affect Synaptic Transmission',
         'tooltip': 'Neuromodulators affect synaptic strength'
     },
     
     'affect_plasticity': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': True,
         'label': 'Affect Plasticity',
         'tooltip': 'Neuromodulators modulate synaptic plasticity'
     },
     
     'affect_gap_junctions': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': False,
         'label': 'Affect Gap Junctions',
         'tooltip': 'Neuromodulators affect gap junction coupling'
@@ -353,7 +353,7 @@ NEUROMODULATION_CONFIG = {
     },
     
     'gradient_strength': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 0.5,
         'min': 0.0,
         'max': 1.0,
@@ -364,14 +364,14 @@ NEUROMODULATION_CONFIG = {
     
     # Receptor desensitization
     'receptor_desensitization': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': False,
         'label': 'Receptor Desensitization',
         'tooltip': 'Enable receptor desensitization with prolonged exposure'
     },
     
     'desensitization_tau': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 5000.0,  # ms
         'min': 1000.0,
         'max': 30000.0,
@@ -382,7 +382,7 @@ NEUROMODULATION_CONFIG = {
     },
     
     'desensitization_strength': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 0.7,
         'min': 0.1,
         'max': 1.0,
@@ -393,7 +393,7 @@ NEUROMODULATION_CONFIG = {
     
     # Pharmacological interventions
     'pharmacology': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': False,
         'label': 'Pharmacological Interventions',
         'tooltip': 'Simulate drug effects on neuromodulation'
@@ -417,7 +417,7 @@ NEUROMODULATION_CONFIG = {
     },
     
     'drug_concentration': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 0.1,  # μM
         'min': 0.0,
         'max': 10.0,
@@ -428,7 +428,7 @@ NEUROMODULATION_CONFIG = {
     },
     
     'drug_onset_time': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 10000.0,  # ms
         'min': 0.0,
         'max': 100000.0,
@@ -439,7 +439,7 @@ NEUROMODULATION_CONFIG = {
     },
     
     'drug_duration': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 30000.0,  # ms
         'min': 1000.0,
         'max': 200000.0,
@@ -451,21 +451,21 @@ NEUROMODULATION_CONFIG = {
     
     # Recording and analysis
     'record_concentrations': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': False,
         'label': 'Record Neuromodulator Concentrations',
         'tooltip': 'Record neuromodulator concentration over time'
     },
     
     'record_receptor_activation': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': False,
         'label': 'Record Receptor Activation',
         'tooltip': 'Record receptor activation levels'
     },
     
     'record_modulation_effects': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': False,
         'label': 'Record Modulation Effects',
         'tooltip': 'Record effects on neural properties'
@@ -473,7 +473,7 @@ NEUROMODULATION_CONFIG = {
     
     # Disease states
     'disease_state': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': False,
         'label': 'Disease State',
         'tooltip': 'Simulate neuromodulatory dysfunction'
@@ -496,7 +496,7 @@ NEUROMODULATION_CONFIG = {
     },
     
     'disease_severity': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 0.5,
         'min': 0.0,
         'max': 1.0,
@@ -507,21 +507,21 @@ NEUROMODULATION_CONFIG = {
     
     # Advanced features
     'cotransmission': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': False,
         'label': 'Cotransmission',
         'tooltip': 'Enable co-release of multiple neuromodulators'
     },
     
     'volume_transmission': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': True,
         'label': 'Volume Transmission',
         'tooltip': 'Enable volume transmission (diffuse signaling)'
     },
     
     'diffusion_coefficient': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 0.1,  # μm²/ms
         'min': 0.01,
         'max': 1.0,
@@ -532,7 +532,7 @@ NEUROMODULATION_CONFIG = {
     },
     
     'membrane_permeability': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 0.01,  # cm/s
         'min': 0.001,
         'max': 0.1,

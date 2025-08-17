@@ -4,7 +4,7 @@
 
 GAP_JUNCTIONS_CONFIG = {
     'enabled': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': False,
         'label': 'Enable Gap Junctions',
         'tooltip': 'Enable electrical coupling between neurons via gap junctions'
@@ -12,7 +12,7 @@ GAP_JUNCTIONS_CONFIG = {
     
     # Basic gap junction parameters
     'conductance': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 0.1,  # nS
         'min': 0.0,
         'max': 10.0,
@@ -23,7 +23,7 @@ GAP_JUNCTIONS_CONFIG = {
     },
     
     'connection_probability': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 0.1,
         'min': 0.0,
         'max': 1.0,
@@ -33,7 +33,7 @@ GAP_JUNCTIONS_CONFIG = {
     },
     
     'max_distance': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 100.0,  # μm
         'min': 0.0,
         'max': 1000.0,
@@ -53,7 +53,7 @@ GAP_JUNCTIONS_CONFIG = {
     },
     
     'coupling_coefficient': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 0.1,
         'min': 0.0,
         'max': 1.0,
@@ -64,14 +64,14 @@ GAP_JUNCTIONS_CONFIG = {
     
     # Voltage-dependent properties
     'voltage_dependence': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': False,
         'label': 'Voltage-Dependent Gating',
         'tooltip': 'Enable voltage-dependent gap junction gating'
     },
     
     'gating_voltage': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': -40.0,  # mV
         'min': -100.0,
         'max': 50.0,
@@ -82,7 +82,7 @@ GAP_JUNCTIONS_CONFIG = {
     },
     
     'gating_slope': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 10.0,  # mV
         'min': 1.0,
         'max': 50.0,
@@ -123,7 +123,7 @@ GAP_JUNCTIONS_CONFIG = {
     },
     
     'cluster_size': {
-        'type': 'spinbox',
+        'type': 'int',
         'default': 10,
         'min': 2,
         'max': 100,
@@ -133,14 +133,14 @@ GAP_JUNCTIONS_CONFIG = {
     
     # Developmental and plasticity
     'developmental_changes': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': False,
         'label': 'Developmental Changes',
         'tooltip': 'Enable time-dependent changes in gap junction properties'
     },
     
     'initial_conductance': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 0.5,  # nS
         'min': 0.0,
         'max': 5.0,
@@ -151,7 +151,7 @@ GAP_JUNCTIONS_CONFIG = {
     },
     
     'final_conductance': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 0.1,  # nS
         'min': 0.0,
         'max': 5.0,
@@ -162,7 +162,7 @@ GAP_JUNCTIONS_CONFIG = {
     },
     
     'development_time_constant': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 1000.0,  # ms
         'min': 10.0,
         'max': 10000.0,
@@ -174,14 +174,14 @@ GAP_JUNCTIONS_CONFIG = {
     
     # Activity-dependent plasticity
     'activity_dependent': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': False,
         'label': 'Activity-Dependent Plasticity',
         'tooltip': 'Enable activity-dependent changes in gap junction strength'
     },
     
     'plasticity_threshold': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 20.0,  # Hz
         'min': 0.1,
         'max': 100.0,
@@ -192,7 +192,7 @@ GAP_JUNCTIONS_CONFIG = {
     },
     
     'potentiation_rate': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 0.01,
         'min': 0.0,
         'max': 0.1,
@@ -203,7 +203,7 @@ GAP_JUNCTIONS_CONFIG = {
     },
     
     'depression_rate': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 0.001,
         'min': 0.0,
         'max': 0.01,
@@ -215,14 +215,14 @@ GAP_JUNCTIONS_CONFIG = {
     
     # Modulation by neurotransmitters
     'neuromodulation': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': False,
         'label': 'Neuromodulation',
         'tooltip': 'Enable modulation of gap junctions by neurotransmitters'
     },
     
     'dopamine_modulation': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 0.0,
         'min': -1.0,
         'max': 1.0,
@@ -232,7 +232,7 @@ GAP_JUNCTIONS_CONFIG = {
     },
     
     'noradrenaline_modulation': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 0.0,
         'min': -1.0,
         'max': 1.0,
@@ -243,21 +243,21 @@ GAP_JUNCTIONS_CONFIG = {
     
     # Recording and analysis
     'record_currents': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': False,
         'label': 'Record Gap Junction Currents',
         'tooltip': 'Record electrical currents through gap junctions'
     },
     
     'record_conductances': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': False,
         'label': 'Record Conductances',
         'tooltip': 'Record gap junction conductance values over time'
     },
     
     'record_coupling_strength': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': False,
         'label': 'Record Coupling Strength',
         'tooltip': 'Record effective coupling strength between neurons'
@@ -265,14 +265,14 @@ GAP_JUNCTIONS_CONFIG = {
     
     # Advanced properties
     'junction_noise': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': False,
         'label': 'Junction Noise',
         'tooltip': 'Add noise to gap junction conductance'
     },
     
     'noise_amplitude': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 0.01,  # nS
         'min': 0.0,
         'max': 0.1,
@@ -283,7 +283,7 @@ GAP_JUNCTIONS_CONFIG = {
     },
     
     'correlation_time': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 10.0,  # ms
         'min': 0.1,
         'max': 100.0,
@@ -295,7 +295,7 @@ GAP_JUNCTIONS_CONFIG = {
     
     # Pathological conditions
     'pathological_conditions': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': False,
         'label': 'Pathological Conditions',
         'tooltip': 'Simulate pathological changes in gap junctions'
@@ -316,7 +316,7 @@ GAP_JUNCTIONS_CONFIG = {
     },
     
     'pathology_severity': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 0.5,
         'min': 0.0,
         'max': 1.0,

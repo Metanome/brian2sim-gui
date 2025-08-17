@@ -2,10 +2,13 @@ import sys
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QTabWidget, QWidget, QVBoxLayout, QGroupBox,
     QPushButton, QLabel, QComboBox, QStackedWidget, QSpinBox, QDoubleSpinBox,
-    QCheckBox, QScrollArea, QGridLayout, QFormLayout, QMessageBox, QFileDialog, QFrame
+    QCheckBox, QScrollArea, QGridLayout, QFormLayout, QMessageBox, QFileDialog, QFrame,
+    QDialog, QTextEdit, QHBoxLayout
 )
 from PyQt6.QtCore import Qt
 
+from parameter_validation import ValidationManager
+from menu_bar import MenuBarManager
 from config_manager import ConfigManager
 from neuron_models_ui import create_neuron_model_group
 from neuron_models import NeuronModelsManager
@@ -39,6 +42,7 @@ from short_term_plasticity_ui import create_short_term_plasticity_group
 from short_term_plasticity_manager import ShortTermPlasticityManager
 from synaptic_receptors_ui import create_synaptic_receptors_group
 from synaptic_receptors_manager import SynapticReceptorsManager
+from cross_tab_dependencies import CrossTabDependencyManager
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -60,12 +64,22 @@ class MainWindow(QMainWindow):
         self.short_term_plasticity_manager = ShortTermPlasticityManager(self)
         self.synaptic_receptors_manager = SynapticReceptorsManager(self)
         
+        # Initialize cross-tab dependency manager (after all other managers)
+        self.cross_tab_dependency_manager = CrossTabDependencyManager(self)
+        
+        # Initialize validation manager (after all other managers)
+        self.validation_manager = ValidationManager(self)
+        
+        # Initialize menu bar manager
+        self.menu_bar_manager = MenuBarManager(self)
+        
         # Initialize simulation components
         self.simulation_engine = SimulationEngine()
         self.results_manager = ResultsManager(self)
         self.code_generator = CodeGenerator()
+        # Start the simulation manager
         self.simulation_manager = SimulationManager(self)
-
+        
         # Store references to UI elements that need to be accessed by managers
         self.neuron_model_combo = None
         self.neuron_model_stacked_widget = None
@@ -164,7 +178,12 @@ class MainWindow(QMainWindow):
         
         # Set the sim_params_ui_module for SimParamsManager
         import sim_params_ui
-        self.sim_params_manager.sim_params_ui_module = sim_params_ui        # Connect signals after UI is initialized but before setting initial state
+        self.sim_params_manager.sim_params_ui_module = sim_params_ui
+        
+        # Setup menu bar after UI is initialized
+        self.menu_bar_manager.setup_menu_bar()
+        
+        # Connect signals after UI is initialized but before setting initial state
         self.neuron_models_manager.connect_signals()
         self.sim_params_manager.connect_signals()
         self.noise_options_manager.connect_signals()
@@ -177,6 +196,85 @@ class MainWindow(QMainWindow):
         self.calcium_dynamics_manager.connect_signals()
         self.short_term_plasticity_manager.connect_signals()
         self.synaptic_receptors_manager.connect_signals()
+        
+        # Connect cross-tab dependencies for neuroscientific accuracy
+        self.cross_tab_dependency_manager.connect_dependencies()
+        
+        # Setup parameter validation (validate on any parameter change)
+        for manager_name in ['neuron_models_manager', 'sim_params_manager', 'noise_options_manager',
+                           'network_options_manager', 'gap_junctions_manager', 'synaptic_receptors_manager',
+                           'calcium_dynamics_manager', 'short_term_plasticity_manager', 
+                           'homeostatic_plasticity_manager', 'neuromodulation_manager', 'multicompartment_manager']:
+            if hasattr(self, manager_name):
+                manager = getattr(self, manager_name)
+                if hasattr(manager, 'param_changed'):
+                    manager.param_changed.connect(self.validation_manager.validate_current_parameters)
+        
+        # Connect simulation components
+        self.simulation_manager.set_components(
+            self.simulation_engine, 
+            self.results_manager, 
+            self.code_generator
+        )
+        
+        # Connect simulation manager signals
+        self.simulation_manager.progress_updated.connect(self._on_simulation_progress)
+        self.simulation_manager.simulation_finished.connect(self._on_simulation_finished)
+        self.simulation_manager.log_message.connect(self._on_simulation_log)
+
+        # Set initial model to LIF through the neuron_models_manager
+        for i in range(self.neuron_model_combo.count()):
+            if self.neuron_model_combo.itemData(i) == "lif":
+                self.neuron_model_combo.setCurrentIndex(i)
+                break
+        
+        # Initial update of neuron model form and visibility
+        self.neuron_models_manager.update_neuron_param_form_and_presets(self.neuron_model_combo.currentIndex())
+        
+    def closeEvent(self, event):
+        """Called when the application is closing."""
+        try:
+            # Validate all parameters before closing
+            validation_results = self.validation_manager.validate_all_parameters()
+            if any(result.severity == 'error' for result in validation_results):
+                reply = QMessageBox.question(self, 'Validation Errors', 
+                    'There are parameter validation errors. Are you sure you want to close?',
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.No)
+                if reply == QMessageBox.StandardButton.No:
+                    event.ignore()
+                    return
+            
+            self.config_manager.save_config()
+            event.accept()
+        except Exception as e:
+            print(f"Error during close: {e}")
+            event.accept()        # Connect signals after UI is initialized but before setting initial state
+        self.neuron_models_manager.connect_signals()
+        self.sim_params_manager.connect_signals()
+        self.noise_options_manager.connect_signals()
+        self.input_patterns_manager.connect_signals()
+        self.network_options_manager.connect_signals()
+        self.advanced_network_manager.connect_signals()
+        self.neuromodulation_manager.connect_signals()
+        self.homeostatic_plasticity_manager.connect_signals()
+        self.multicompartment_manager.connect_signals()
+        self.calcium_dynamics_manager.connect_signals()
+        self.short_term_plasticity_manager.connect_signals()
+        self.synaptic_receptors_manager.connect_signals()
+        
+        # Connect cross-tab dependencies for neuroscientific accuracy
+        self.cross_tab_dependency_manager.connect_dependencies()
+        
+        # Setup parameter validation (validate on any parameter change)
+        for manager_name in ['neuron_models_manager', 'sim_params_manager', 'noise_options_manager',
+                           'network_options_manager', 'gap_junctions_manager', 'synaptic_receptors_manager',
+                           'calcium_dynamics_manager', 'short_term_plasticity_manager', 
+                           'homeostatic_plasticity_manager', 'neuromodulation_manager', 'multicompartment_manager']:
+            if hasattr(self, manager_name):
+                manager = getattr(self, manager_name)
+                if hasattr(manager, 'param_changed'):
+                    manager.param_changed.connect(self.validation_manager.validate_current_parameters)
         
         # Connect simulation components
         self.simulation_manager.set_components(
@@ -208,13 +306,17 @@ class MainWindow(QMainWindow):
         # Tab widget for different sections
         self.tabs = QTabWidget()
         main_layout.addWidget(self.tabs)
+        
+        # Store tab information for dynamic visibility management
+        self.tab_info = {}
+        self.current_user_level = "beginner"  # Default to beginner mode
 
         # --- Main Tab Content Setup ---
         # Create a dedicated QWidget to hold all the content for the main tab.
         # This widget will be placed inside the QScrollArea.
         main_tab_content_holder = QWidget()
         
-        # Main layout for this content_holder widget
+        # Main layout for this content_holder widget using standard layout
         main_tab_layout = QVBoxLayout(main_tab_content_holder)
 
         # --- Configuration Management ---
@@ -237,83 +339,200 @@ class MainWindow(QMainWindow):
         input_patterns_group = create_input_patterns_group(self)
         main_tab_layout.addWidget(input_patterns_group)
 
-        # --- Network Options ---
-        network_options_group = create_network_options_group(self)
-        main_tab_layout.addWidget(network_options_group)
-
-        # --- Advanced Network Features ---
-        advanced_network_group = create_advanced_network_group(self)
-        main_tab_layout.addWidget(advanced_network_group)
-
         # Scroll Area for the Main Tab's content
         main_tab_scroll_area = QScrollArea()
+        # --- Core Tab (formerly Main) ---
         main_tab_scroll_area.setWidgetResizable(True)
-        main_tab_scroll_area.setFrameStyle(QFrame.Shape.NoFrame)
-        main_tab_scroll_area.setWidget(main_tab_content_holder)        # Add the scroll_area (which contains all the content) as the "Main" tab page
-        self.tabs.addTab(main_tab_scroll_area, "Main")
+        main_tab_scroll_area.setWidget(main_tab_content_holder)        
+        core_tab_index = self.tabs.addTab(main_tab_scroll_area, "Core")
+        self.tab_info["core"] = {
+            "index": core_tab_index,
+            "widget": main_tab_scroll_area,
+            "level": "beginner",
+            "visible": True
+        }
+        
+        # --- Network Architecture Tab ---
+        network_arch_content_holder = QWidget()
+        network_arch_layout = QVBoxLayout(network_arch_content_holder)
+        
+        # Network Options
+        network_options_group = create_network_options_group(self)
+        network_arch_layout.addWidget(network_options_group)
+        
+        # Advanced Network Features
+        advanced_network_group = create_advanced_network_group(self)
+        network_arch_layout.addWidget(advanced_network_group)
+        
+        # Gap Junctions (part of network connectivity)
+        gap_junctions_group = create_gap_junctions_group(self)
+        network_arch_layout.addWidget(gap_junctions_group)
+        
+        # Network Architecture scroll area
+        network_arch_scroll = QScrollArea()
+        network_arch_scroll.setWidgetResizable(True)
+        network_arch_scroll.setWidget(network_arch_content_holder)
+        network_tab_index = self.tabs.addTab(network_arch_scroll, "Network")
+        self.tab_info["network"] = {
+            "index": network_tab_index,
+            "widget": network_arch_scroll,
+            "level": "intermediate",
+            "visible": False  # Hidden by default for beginners
+        }
         
         # --- Simulation Tab ---
         simulation_tab = create_simulation_tab(self)
-        self.tabs.addTab(simulation_tab, "Simulation")
+        sim_tab_index = self.tabs.addTab(simulation_tab, "Simulation")
+        self.tab_info["simulation"] = {
+            "index": sim_tab_index,
+            "widget": simulation_tab,
+            "level": "beginner",
+            "visible": True
+        }
         
-        # --- Gap Junctions Tab ---
-        gap_junctions_group = create_gap_junctions_group(self)
-        gap_junctions_scroll = QScrollArea()
-        gap_junctions_scroll.setWidgetResizable(True)
-        gap_junctions_scroll.setFrameStyle(QFrame.Shape.NoFrame)
-        gap_junctions_scroll.setWidget(gap_junctions_group)
-        self.tabs.addTab(gap_junctions_scroll, "Gap Junctions")
+        # --- Synaptic Properties Tab ---
+        synaptic_props_content_holder = QWidget()
+        synaptic_props_layout = QVBoxLayout(synaptic_props_content_holder)
         
-        # --- Synaptic Receptors Tab ---
+        # Synaptic Receptors
         synaptic_receptors_group = create_synaptic_receptors_group(self)
-        synaptic_receptors_scroll = QScrollArea()
-        synaptic_receptors_scroll.setWidgetResizable(True)
-        synaptic_receptors_scroll.setFrameStyle(QFrame.Shape.NoFrame)
-        synaptic_receptors_scroll.setWidget(synaptic_receptors_group)
-        self.tabs.addTab(synaptic_receptors_scroll, "Synaptic Receptors")
+        synaptic_props_layout.addWidget(synaptic_receptors_group)
         
-        # --- Calcium Dynamics Tab ---
-        calcium_dynamics_group = create_calcium_dynamics_group(self)
-        calcium_dynamics_scroll = QScrollArea()
-        calcium_dynamics_scroll.setWidgetResizable(True)
-        calcium_dynamics_scroll.setFrameStyle(QFrame.Shape.NoFrame)
-        calcium_dynamics_scroll.setWidget(calcium_dynamics_group)
-        self.tabs.addTab(calcium_dynamics_scroll, "Calcium Dynamics")
-        
-        # --- Short-Term Plasticity Tab ---
+        # Short-Term Plasticity (affects synaptic transmission)
         short_term_plasticity_group = create_short_term_plasticity_group(self)
-        short_term_plasticity_scroll = QScrollArea()
-        short_term_plasticity_scroll.setWidgetResizable(True)
-        short_term_plasticity_scroll.setFrameStyle(QFrame.Shape.NoFrame)
-        short_term_plasticity_scroll.setWidget(short_term_plasticity_group)
-        self.tabs.addTab(short_term_plasticity_scroll, "Short-Term Plasticity")
+        synaptic_props_layout.addWidget(short_term_plasticity_group)
         
-        # --- Homeostatic Plasticity Tab ---
+        # Synaptic Properties scroll area
+        synaptic_props_scroll = QScrollArea()
+        synaptic_props_scroll.setWidgetResizable(True)
+        synaptic_props_scroll.setWidget(synaptic_props_content_holder)
+        synaptic_tab_index = self.tabs.addTab(synaptic_props_scroll, "Synapses")
+        self.tab_info["synapses"] = {
+            "index": synaptic_tab_index,
+            "widget": synaptic_props_scroll,
+            "level": "intermediate",
+            "visible": False
+        }
+        
+        # --- Plasticity & Dynamics Tab ---
+        plasticity_dynamics_content_holder = QWidget()
+        plasticity_dynamics_layout = QVBoxLayout(plasticity_dynamics_content_holder)
+        
+        # Calcium Dynamics (underlying mechanism for many plasticity forms)
+        calcium_dynamics_group = create_calcium_dynamics_group(self)
+        plasticity_dynamics_layout.addWidget(calcium_dynamics_group)
+        
+        # Homeostatic Plasticity (often calcium-dependent)
         homeostatic_plasticity_group = create_homeostatic_plasticity_group(self)
-        homeostatic_plasticity_scroll = QScrollArea()
-        homeostatic_plasticity_scroll.setWidgetResizable(True)
-        homeostatic_plasticity_scroll.setFrameStyle(QFrame.Shape.NoFrame)
-        homeostatic_plasticity_scroll.setWidget(homeostatic_plasticity_group)
-        self.tabs.addTab(homeostatic_plasticity_scroll, "Homeostatic Plasticity")
+        plasticity_dynamics_layout.addWidget(homeostatic_plasticity_group)
+        
+        # Plasticity & Dynamics scroll area
+        plasticity_dynamics_scroll = QScrollArea()
+        plasticity_dynamics_scroll.setWidgetResizable(True)
+        plasticity_dynamics_scroll.setWidget(plasticity_dynamics_content_holder)
+        plasticity_tab_index = self.tabs.addTab(plasticity_dynamics_scroll, "Plasticity")
+        self.tab_info["plasticity"] = {
+            "index": plasticity_tab_index,
+            "widget": plasticity_dynamics_scroll,
+            "level": "advanced",
+            "visible": False
+        }
         
         # --- Neuromodulation Tab ---
         neuromodulation_group = create_neuromodulation_group(self)
         neuromodulation_scroll = QScrollArea()
         neuromodulation_scroll.setWidgetResizable(True)
-        neuromodulation_scroll.setFrameStyle(QFrame.Shape.NoFrame)
         neuromodulation_scroll.setWidget(neuromodulation_group)
-        self.tabs.addTab(neuromodulation_scroll, "Neuromodulation")
+        neuromodulation_tab_index = self.tabs.addTab(neuromodulation_scroll, "Neuromodulation")
+        self.tab_info["neuromodulation"] = {
+            "index": neuromodulation_tab_index,
+            "widget": neuromodulation_scroll,
+            "level": "advanced",
+            "visible": False
+        }
         
         # --- Multi-Compartment Tab ---
         multicompartment_group = create_multicompartment_group(self)
         multicompartment_scroll = QScrollArea()
         multicompartment_scroll.setWidgetResizable(True)
-        multicompartment_scroll.setFrameStyle(QFrame.Shape.NoFrame)
         multicompartment_scroll.setWidget(multicompartment_group)
-        self.tabs.addTab(multicompartment_scroll, "Multi-Compartment")
+        multicompartment_tab_index = self.tabs.addTab(multicompartment_scroll, "Multi-Compartment")
+        self.tab_info["multicompartment"] = {
+            "index": multicompartment_tab_index,
+            "widget": multicompartment_scroll,
+            "level": "advanced",
+            "visible": False
+        }
         
         # Set initial tab
         self.tabs.setCurrentIndex(0)
+        
+        # Apply initial tab visibility for beginner level
+        self.set_user_level("beginner")
+
+    def set_user_level(self, level):
+        """Set the user level and update tab visibility accordingly."""
+        self.current_user_level = level
+        
+        # Define which tabs are visible for each user level
+        # Core and Simulation tabs are ALWAYS visible - they're essential
+        level_visibility = {
+            "beginner": ["core", "simulation"],
+            "intermediate": ["core", "simulation", "network", "synapses"],
+            "advanced": ["core", "simulation", "network", "synapses", "plasticity", "neuromodulation", "multicompartment"]
+        }
+        
+        # Show/hide tabs based on user level
+        visible_tabs = level_visibility.get(level, level_visibility["beginner"])
+        
+        for tab_key, tab_data in self.tab_info.items():
+            # Core and Simulation tabs are always visible - never hide them
+            if tab_key in ["core", "simulation"]:
+                should_be_visible = True
+            else:
+                should_be_visible = tab_key in visible_tabs
+                
+            tab_data["visible"] = should_be_visible
+            
+            if should_be_visible:
+                # Check if tab is already in the tab widget
+                current_index = self.tabs.indexOf(tab_data["widget"])
+                if current_index == -1:
+                    # Tab is not currently in widget, add it back in correct position
+                    self._restore_tab(tab_key, tab_data)
+            else:
+                # Hide tab by removing it from tab widget
+                current_index = self.tabs.indexOf(tab_data["widget"])
+                if current_index != -1:
+                    self.tabs.removeTab(current_index)
+                    
+    def _restore_tab(self, tab_key, tab_data):
+        """Restore a tab to its correct position in the tab widget."""
+        # Calculate correct position based on tab order
+        tab_order = ["core", "network", "simulation", "synapses", "plasticity", "neuromodulation", "multicompartment"]
+        target_position = tab_order.index(tab_key)
+        
+        # Count how many tabs before this one are currently visible
+        actual_position = 0
+        for i, other_tab_key in enumerate(tab_order[:target_position]):
+            if other_tab_key in self.tab_info and self.tab_info[other_tab_key]["visible"]:
+                other_index = self.tabs.indexOf(self.tab_info[other_tab_key]["widget"])
+                if other_index != -1:
+                    actual_position += 1
+        
+        # Get the tab title from the widget
+        tab_title = {
+            "core": "Core",
+            "network": "Network",
+            "simulation": "Simulation",
+            "synapses": "Synapses",
+            "plasticity": "Plasticity",
+            "neuromodulation": "Neuromodulation",
+            "multicompartment": "Multi-Compartment"
+        }.get(tab_key, tab_key.title())
+        
+        # Insert tab at correct position
+        self.tabs.insertTab(actual_position, tab_data["widget"], tab_title)
 
     def _add_param_to_grid_layout(self, grid_layout, label_text, widget, num_cols, current_pos_tracker):
         """

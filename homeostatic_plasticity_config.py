@@ -4,7 +4,7 @@
 
 HOMEOSTATIC_PLASTICITY_CONFIG = {
     'enabled': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': False,
         'label': 'Enable Homeostatic Plasticity',
         'tooltip': 'Enable homeostatic plasticity mechanisms for network stability'
@@ -12,7 +12,7 @@ HOMEOSTATIC_PLASTICITY_CONFIG = {
     
     # Target activity levels
     'target_firing_rate': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 5.0,  # Hz
         'min': 0.1,
         'max': 50.0,
@@ -23,7 +23,7 @@ HOMEOSTATIC_PLASTICITY_CONFIG = {
     },
     
     'target_window': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 1000.0,  # ms
         'min': 100.0,
         'max': 10000.0,
@@ -34,7 +34,7 @@ HOMEOSTATIC_PLASTICITY_CONFIG = {
     },
     
     'regulation_threshold': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 0.2,  # relative deviation
         'min': 0.05,
         'max': 1.0,
@@ -45,14 +45,14 @@ HOMEOSTATIC_PLASTICITY_CONFIG = {
     
     # Synaptic scaling
     'synaptic_scaling': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': True,
         'label': 'Synaptic Scaling',
         'tooltip': 'Enable multiplicative synaptic scaling'
     },
     
     'scaling_rate': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 0.01,  # per second
         'min': 0.001,
         'max': 0.1,
@@ -63,7 +63,7 @@ HOMEOSTATIC_PLASTICITY_CONFIG = {
     },
     
     'min_weight_scaling': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 0.1,
         'min': 0.01,
         'max': 0.9,
@@ -73,7 +73,7 @@ HOMEOSTATIC_PLASTICITY_CONFIG = {
     },
     
     'max_weight_scaling': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 5.0,
         'min': 1.1,
         'max': 10.0,
@@ -84,7 +84,7 @@ HOMEOSTATIC_PLASTICITY_CONFIG = {
     
     # Intrinsic excitability regulation
     'intrinsic_regulation': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': True,
         'label': 'Intrinsic Excitability Regulation',
         'tooltip': 'Enable regulation of intrinsic neuron excitability'
@@ -99,14 +99,14 @@ HOMEOSTATIC_PLASTICITY_CONFIG = {
     },
     
     'threshold_adaptation': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': True,
         'label': 'Threshold Adaptation',
         'tooltip': 'Enable adaptive spike threshold adjustment'
     },
     
     'threshold_rate': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 0.005,  # per second
         'min': 0.0001,
         'max': 0.05,
@@ -117,7 +117,7 @@ HOMEOSTATIC_PLASTICITY_CONFIG = {
     },
     
     'min_threshold': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': -60.0,  # mV
         'min': -80.0,
         'max': -40.0,
@@ -128,7 +128,7 @@ HOMEOSTATIC_PLASTICITY_CONFIG = {
     },
     
     'max_threshold': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': -40.0,  # mV
         'min': -60.0,
         'max': -20.0,
@@ -140,14 +140,14 @@ HOMEOSTATIC_PLASTICITY_CONFIG = {
     
     # Metaplasticity
     'metaplasticity': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': False,
         'label': 'Metaplasticity',
         'tooltip': 'Enable activity-dependent changes in plasticity'
     },
     
     'metaplasticity_threshold': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 10.0,  # Hz
         'min': 1.0,
         'max': 100.0,
@@ -158,7 +158,7 @@ HOMEOSTATIC_PLASTICITY_CONFIG = {
     },
     
     'meta_ltp_scaling': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 1.2,
         'min': 0.5,
         'max': 3.0,
@@ -168,7 +168,7 @@ HOMEOSTATIC_PLASTICITY_CONFIG = {
     },
     
     'meta_ltd_scaling': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 0.8,
         'min': 0.1,
         'max': 1.5,
@@ -179,14 +179,14 @@ HOMEOSTATIC_PLASTICITY_CONFIG = {
     
     # BCM-like sliding threshold
     'bcm_plasticity': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': False,
         'label': 'BCM Plasticity',
         'tooltip': 'Enable BCM-like plasticity with sliding threshold'
     },
     
     'bcm_tau': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 10000.0,  # ms
         'min': 1000.0,
         'max': 100000.0,
@@ -197,7 +197,7 @@ HOMEOSTATIC_PLASTICITY_CONFIG = {
     },
     
     'bcm_power': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 2.0,
         'min': 1.0,
         'max': 4.0,
@@ -208,14 +208,14 @@ HOMEOSTATIC_PLASTICITY_CONFIG = {
     
     # Network-level homeostasis
     'network_regulation': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': False,
         'label': 'Network-Level Regulation',
         'tooltip': 'Enable global network activity regulation'
     },
     
     'network_target_rate': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 15.0,  # Hz (population rate)
         'min': 1.0,
         'max': 100.0,
@@ -226,21 +226,21 @@ HOMEOSTATIC_PLASTICITY_CONFIG = {
     },
     
     'global_scaling': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': False,
         'label': 'Global Weight Scaling',
         'tooltip': 'Apply uniform scaling to all synaptic weights'
     },
     
     'inhibitory_gain_control': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': True,
         'label': 'Inhibitory Gain Control',
         'tooltip': 'Regulate inhibitory strength for network balance'
     },
     
     'inhibitory_scaling_rate': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 0.02,  # per second
         'min': 0.001,
         'max': 0.1,
@@ -252,7 +252,7 @@ HOMEOSTATIC_PLASTICITY_CONFIG = {
     
     # Developmental homeostasis
     'developmental_regulation': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': False,
         'label': 'Developmental Regulation',
         'tooltip': 'Enable age-dependent homeostatic changes'
@@ -267,7 +267,7 @@ HOMEOSTATIC_PLASTICITY_CONFIG = {
     },
     
     'age_scaling_factor': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 1.0,
         'min': 0.1,
         'max': 3.0,
@@ -286,7 +286,7 @@ HOMEOSTATIC_PLASTICITY_CONFIG = {
     },
     
     'detection_window': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 500.0,  # ms
         'min': 50.0,
         'max': 5000.0,
@@ -297,7 +297,7 @@ HOMEOSTATIC_PLASTICITY_CONFIG = {
     },
     
     'smoothing_tau': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 2000.0,  # ms
         'min': 100.0,
         'max': 20000.0,
@@ -309,28 +309,28 @@ HOMEOSTATIC_PLASTICITY_CONFIG = {
     
     # Recording and monitoring
     'record_homeostasis': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': False,
         'label': 'Record Homeostatic Variables',
         'tooltip': 'Record homeostatic plasticity variables'
     },
     
     'record_scaling_factors': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': False,
         'label': 'Record Scaling Factors',
         'tooltip': 'Record synaptic and intrinsic scaling factors'
     },
     
     'record_thresholds': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': False,
         'label': 'Record Adaptation Thresholds',
         'tooltip': 'Record adaptive threshold values'
     },
     
     'record_activity_levels': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': False,
         'label': 'Record Activity Levels',
         'tooltip': 'Record detected activity levels for each neuron'
@@ -338,7 +338,7 @@ HOMEOSTATIC_PLASTICITY_CONFIG = {
     
     # Pathological conditions
     'homeostatic_dysfunction': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': False,
         'label': 'Homeostatic Dysfunction',
         'tooltip': 'Simulate impaired homeostatic mechanisms'
@@ -360,7 +360,7 @@ HOMEOSTATIC_PLASTICITY_CONFIG = {
     },
     
     'dysfunction_severity': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 0.5,
         'min': 0.0,
         'max': 1.0,
@@ -371,14 +371,14 @@ HOMEOSTATIC_PLASTICITY_CONFIG = {
     
     # Advanced regulation mechanisms
     'calcium_homeostasis': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': False,
         'label': 'Calcium Homeostasis',
         'tooltip': 'Enable calcium-dependent homeostatic regulation'
     },
     
     'calcium_target': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 0.1,  # μM
         'min': 0.01,
         'max': 1.0,
@@ -389,7 +389,7 @@ HOMEOSTATIC_PLASTICITY_CONFIG = {
     },
     
     'calcium_regulation_rate': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 0.001,  # per second
         'min': 0.0001,
         'max': 0.01,
@@ -401,7 +401,7 @@ HOMEOSTATIC_PLASTICITY_CONFIG = {
     
     # Compensation mechanisms
     'compensation_delay': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 60000.0,  # ms (1 minute)
         'min': 1000.0,
         'max': 600000.0,  # 10 minutes
@@ -412,7 +412,7 @@ HOMEOSTATIC_PLASTICITY_CONFIG = {
     },
     
     'compensation_strength': {
-        'type': 'spinbox',
+        'type': 'double',
         'default': 1.0,
         'min': 0.1,
         'max': 5.0,
@@ -422,7 +422,7 @@ HOMEOSTATIC_PLASTICITY_CONFIG = {
     },
     
     'bidirectional_regulation': {
-        'type': 'checkbox',
+        'type': 'bool',
         'default': True,
         'label': 'Bidirectional Regulation',
         'tooltip': 'Allow both up and down regulation of activity'

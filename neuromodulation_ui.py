@@ -1,7 +1,8 @@
 # neuromodulation_ui.py
 # UI components for neuromodulation configuration in Brian2Sim GUI
 
-from PyQt6.QtWidgets import QGroupBox, QVBoxLayout, QWidget, QGridLayout, QLabel
+from PyQt6.QtWidgets import QGroupBox, QVBoxLayout, QWidget, QGridLayout, QLabel, QHBoxLayout
+from PyQt6.QtCore import Qt
 from ui_forms import BaseFormGenerator
 from neuromodulation_config import NEUROMODULATION_CONFIG
 
@@ -36,45 +37,91 @@ def create_neuromodulation_group(main_window):
     return neuromodulation_group
 
 class NeuromodulationFormGenerator(BaseFormGenerator):
-    """Form generator for neuromodulation configuration using the same pattern as other working generators."""
+    """Form generator for neuromodulation configuration with checkbox visibility pattern."""
     
     def _create_forms(self):
-        """Create neuromodulation configuration forms."""
-        # Create main form layout similar to other generators
-        main_widget = QWidget()
-        main_layout = QVBoxLayout(main_widget)
-        main_layout.setContentsMargins(0, 0, 0, 0)
-        
-        # Container for parameters
-        params_container = QWidget()
-        params_layout = QGridLayout(params_container)
-        params_layout.setSpacing(8)
-        
+        # Main widget for the whole section
+        section_widget = QWidget()
+        section_layout = QVBoxLayout(section_widget)
+        section_layout.setContentsMargins(0,0,0,0)
+        section_layout.setSpacing(5)
+
         param_widgets = {}
         self.param_labels["main"] = {}
         self.cell_widgets["main"] = {}
+
+        # Create the params group widget
+        self.params_group_widget = QWidget()
+
+        # Check if "enabled" toggle exists in config
+        has_enabled_toggle = "enabled" in self.config
         
-        row, col = 0, 0
+        if has_enabled_toggle:
+            enabled_config = self.config["enabled"]
+            enable_checkbox = self._create_widget_for_param("enabled", enabled_config)
+            
+            if enable_checkbox:
+                enable_layout = QHBoxLayout()
+                enable_layout.setContentsMargins(8, 5, 0, 5)
+                enable_layout.addWidget(enable_checkbox)
+                
+                default_enable_label = "Enable Neuromodulation"
+                enable_label_text = enabled_config.get("label", default_enable_label)
+                enable_label = QLabel(enable_label_text)
+                enable_layout.addWidget(enable_label)
+                enable_layout.addStretch()
+                section_layout.addLayout(enable_layout)
+                
+                param_widgets["enabled"] = enable_checkbox
+                
+                # Connect checkbox to show/hide params group (only if it's actually a checkbox)
+                if hasattr(enable_checkbox, 'stateChanged'):
+                    enable_checkbox.stateChanged.connect(
+                        lambda state: self.params_group_widget.setVisible(state == 2)
+                    )
+                    self.params_group_widget.setVisible(enable_checkbox.isChecked())
+                else:
+                    # If it's not a checkbox, assume it should always be visible
+                    self.params_group_widget.setVisible(True)
+        else:
+            self.params_group_widget.setVisible(True)
+
+        # Layout for parameters
+        params_grid = QGridLayout(self.params_group_widget)
+        params_grid.setSpacing(8)
+        
+        param_configs = {k: v for k, v in self.config.items() if k != "enabled"}
         num_cols = 3
+        row, col = 0, 0
         
-        for param_key, param_config in self.config.items():
-            input_widget = self._create_widget_for_param(param_key, param_config)
-            param_widgets[param_key] = input_widget
+        for param_key, param_config_item in param_configs.items():
+            input_widget = self._create_widget_for_param(param_key, param_config_item)
             
-            # Add to layout
-            params_layout.addWidget(input_widget, row, col)
-            
-            # Move to next position
-            col += 1
-            if col >= num_cols:
-                col = 0
-                row += 1
+            if input_widget:
+                cell_widget = QWidget()
+                actual_label_text = param_config_item.get("label", param_key.replace("_", " ").title())
+                label_for_param = QLabel(actual_label_text)
+                label_for_param.setToolTip(param_config_item.get("tooltip", ""))
+
+                cell_layout = QVBoxLayout(cell_widget)
+                label_for_param.setAlignment(Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignLeft)
+                cell_layout.addWidget(label_for_param)
+                cell_layout.addWidget(input_widget)
+
+                cell_layout.setContentsMargins(1, 1, 1, 1)
+                params_grid.addWidget(cell_widget, row, col)
+                param_widgets[param_key] = input_widget
+                self.param_labels["main"][param_key] = label_for_param
+                self.cell_widgets["main"][param_key] = cell_widget
+                
+                col += 1
+                if col >= num_cols:
+                    col, row = 0, row + 1
         
-        # Store widgets
+        section_layout.addWidget(self.params_group_widget)
+        
+        self.forms["main"] = section_widget
         self.param_widgets["main"] = param_widgets
         
-        # Add container to main layout
-        main_layout.addWidget(params_container)
-        
-        # Store the main widget
-        self.forms["main"] = main_widget
+        # Setup dependency handling for parameters with depends_on
+        self._setup_dependencies()

@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import QMessageBox
 from PyQt6.QtWidgets import QFormLayout, QLabel, QLineEdit, QDoubleSpinBox, QTextEdit, QComboBox, QWidget
 from ui_forms import NeuronModelFormGenerator
-from neuron_models_config import NEURON_MODELS_CONFIG, MODEL_PRESETS, PRESET_DEFAULT_TEXT, PRESET_CUSTOM_TEXT
+from neuron_models_config import NEURON_MODELS_CONFIG, PRESET_DEFAULT_TEXT, PRESET_CUSTOM_TEXT
 
 class NeuronModelsManager:
     def __init__(self, main_window):
@@ -64,8 +64,11 @@ class NeuronModelsManager:
         self.main_window.neuron_model_preset_combo.clear()
         self.main_window.neuron_model_preset_combo.addItem(PRESET_DEFAULT_TEXT, userData="none")
         self.main_window.neuron_model_preset_combo.addItem(PRESET_CUSTOM_TEXT, userData="custom")
-        if model_key in MODEL_PRESETS:
-            for preset_key, preset in MODEL_PRESETS[model_key].items():
+        
+        # Add model-specific presets from config
+        model_config = NEURON_MODELS_CONFIG.get(model_key, {})
+        if "presets" in model_config:
+            for preset_key, preset in model_config["presets"].items():
                 if preset_key not in ["none", "custom"]:  # Skip the special presets
                     self.main_window.neuron_model_preset_combo.addItem(preset["display_name"], userData=preset_key)
         self.main_window.neuron_model_preset_combo.blockSignals(False)        
@@ -268,11 +271,6 @@ class NeuronModelsManager:
         # Add the new model config
         NEURON_MODELS_CONFIG[model_key] = model_config
 
-        # Update the model presets mapping
-        global MODEL_PRESETS
-        MODEL_PRESETS = {model_key: config["presets"] 
-                        for model_key, config in NEURON_MODELS_CONFIG.items()}
-
         # Add the model to the combo box
         self.main_window.neuron_model_combo.addItem(model_config["display_name"], userData=model_key)
 
@@ -285,11 +283,6 @@ class NeuronModelsManager:
 
         # Remove the model config
         del NEURON_MODELS_CONFIG[model_key]
-
-        # Update the model presets mapping
-        global MODEL_PRESETS
-        MODEL_PRESETS = {model_key: config["presets"] 
-                        for model_key, config in NEURON_MODELS_CONFIG.items()}
 
         # Remove the model from the combo box
         combo_idx = self.main_window.neuron_model_combo.findData(model_key)

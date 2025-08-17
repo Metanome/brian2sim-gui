@@ -62,7 +62,7 @@ class BaseFormGenerator(QWidget):
         
         input_widget = None
         
-        if param_type == "bool":
+        if param_type == "bool" or param_type == "checkbox":
             input_widget = QCheckBox()
             if default_value is not None:
                 input_widget.setChecked(default_value)
@@ -1063,3 +1063,61 @@ def create_widget_from_config(param_key, param_config):
     # Use the mock generator to create the widget
     mock_generator = MockFormGenerator()
     return mock_generator._create_widget_for_param(param_key, param_config)
+
+
+class InputPatternsFormGenerator(BaseFormGenerator):
+    """Form generator for input patterns configuration."""
+    
+    def __init__(self, config):
+        super().__init__(config)
+        
+    def _create_forms(self):
+        """Create input patterns configuration forms."""
+        # Main widget for the whole section
+        section_widget = QWidget()
+        section_layout = QVBoxLayout(section_widget)
+        section_layout.setContentsMargins(0,0,0,0)
+        section_layout.setSpacing(5)
+
+        param_widgets = {}
+        self.param_labels["main"] = {}
+
+        # Check if "enabled" toggle exists in config
+        has_enabled_toggle = "enabled" in self.config
+        
+        if has_enabled_toggle:
+            enabled_config = self.config["enabled"]
+            enable_checkbox = self._create_widget_for_param("enabled", enabled_config)
+            
+            if enable_checkbox:
+                enable_layout = QHBoxLayout()
+                enable_layout.setContentsMargins(8, 5, 0, 5)
+                enable_layout.addWidget(enable_checkbox)
+                section_layout.addLayout(enable_layout)
+                param_widgets["enabled"] = enable_checkbox
+
+        # Create the parameters group widget
+        self.params_group_widget = QWidget()
+        params_layout = QFormLayout(self.params_group_widget)
+        params_layout.setContentsMargins(8, 5, 8, 5)
+        
+        # Add all non-enabled parameters
+        for param_key, param_config in self.config.items():
+            if param_key != "enabled" and isinstance(param_config, dict):
+                widget = self._create_widget_for_param(param_key, param_config)
+                if widget:
+                    label = QLabel(param_config.get("label", param_key))
+                    if param_config.get("tooltip"):
+                        label.setToolTip(param_config["tooltip"])
+                    
+                    params_layout.addRow(label, widget)
+                    param_widgets[param_key] = widget
+                    self.param_labels["main"][param_key] = label
+
+        section_layout.addWidget(self.params_group_widget)
+        
+        # Store the form and param widgets correctly
+        self.forms["main"] = section_widget
+        self.param_widgets["main"] = param_widgets  # This should be a dictionary with form key
+        
+        return section_widget

@@ -3,10 +3,12 @@ Input patterns manager for Brian2 neural network simulator.
 Handles user interactions and state management for input patterns configuration.
 """
 
-from PyQt6.QtCore import QObject
+from PyQt6.QtCore import QObject, pyqtSignal
 
 class InputPatternsManager(QObject):
     """Manager for input patterns configuration and UI interactions."""
+    
+    param_changed = pyqtSignal(str, object)  # parameter_name, new_value
     
     def __init__(self, main_window):
         super().__init__()
@@ -19,11 +21,23 @@ class InputPatternsManager(QObject):
             enabled_widget = self.main_window.input_patterns_forms.get('enabled')
             if enabled_widget:
                 enabled_widget.toggled.connect(self.on_enabled_changed)
+                enabled_widget.toggled.connect(lambda x: self.param_changed.emit('input_patterns_enabled', x))
                 
             # Connect pattern type combo box
             pattern_type_widget = self.main_window.input_patterns_forms.get('pattern_type')
             if pattern_type_widget:
                 pattern_type_widget.currentTextChanged.connect(self.on_pattern_type_changed)
+                pattern_type_widget.currentTextChanged.connect(lambda x: self.param_changed.emit('input_pattern_type', x))
+            
+            # Connect all other parameter widgets
+            for param_name, widget in self.main_window.input_patterns_forms.items():
+                if param_name not in ['enabled', 'pattern_type'] and widget:
+                    if hasattr(widget, 'valueChanged'):  # Spin boxes
+                        widget.valueChanged.connect(lambda val, name=param_name: self.param_changed.emit(name, val))
+                    elif hasattr(widget, 'textChanged'):  # Line edits
+                        widget.textChanged.connect(lambda val, name=param_name: self.param_changed.emit(name, val))
+                    elif hasattr(widget, 'currentTextChanged'):  # Combo boxes
+                        widget.currentTextChanged.connect(lambda val, name=param_name: self.param_changed.emit(name, val))
     
     def on_enabled_changed(self, enabled):
         """Handle input patterns enabled/disabled state change."""
@@ -53,6 +67,8 @@ class InputPatternsManager(QObject):
                         config[key] = widget.text()
                     elif hasattr(widget, 'currentData'):  # QComboBox
                         config[key] = widget.currentData()
+                    elif hasattr(widget, 'currentText'):  # QComboBox (fallback)
+                        config[key] = widget.currentText()
         
         return config
     
@@ -75,3 +91,12 @@ class InputPatternsManager(QObject):
                         widget.setCurrentText(str(value))
                 except (ValueError, TypeError) as e:
                     print(f"Error loading input patterns config for {key}: {e}")
+    
+    def get_parameters(self):
+        """Get current parameters for simulation."""
+        return self.get_input_patterns_config()
+    
+    def reset_to_defaults(self):
+        """Reset input patterns to default values."""
+        if hasattr(self.main_window, 'input_patterns_form_generator'):
+            self.main_window.input_patterns_form_generator.reset_to_defaults()
