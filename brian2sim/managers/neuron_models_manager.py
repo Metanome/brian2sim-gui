@@ -95,10 +95,6 @@ class NeuronModelsManager:
         # Ensure LIF threshold/reset visibility is updated on model change
         self.main_window.sim_params_manager.update_lif_params_visibility(model_key)
 
-        # Connect LIF parameter signals if they were just created
-        if model_key == "lif":
-            self.main_window.sim_params_manager.connect_lif_signals()
-
     def apply_neuron_model_preset(self, index):
         if not (
             self.main_window.neuron_model_combo

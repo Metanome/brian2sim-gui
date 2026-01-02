@@ -6,6 +6,7 @@ This module uses modular builder classes for constructing simulation components.
 """
 
 import time
+from datetime import datetime
 
 from PyQt6.QtCore import QObject, QTimer, pyqtSignal
 
@@ -108,6 +109,10 @@ class SimulationEngine(QObject):
 
     def _execute_brian2_simulation(self, params):
         """Execute the actual Brian2 simulation using builder classes."""
+        # Initialize timing for standalone calls (used in tests)
+        if self.simulation_start_time is None:
+            self.simulation_start_time = time.time()
+
         try:
             self.progress_updated.emit(5, "Initializing Brian2...")
 
@@ -143,12 +148,15 @@ class SimulationEngine(QObject):
             homeostatic_plasticity_params = params.get("homeostatic_plasticity", {})
             neuromodulation_params = params.get("neuromodulation", {})
             multicompartment_params = params.get("multicompartment", {})
+            monitors_params = params.get("monitors", {})
 
             # Validate critical parameters
-            if not sim_params.get("sim_time") or sim_params.get("sim_time") <= 0:
+            sim_time_val = sim_params.get("sim_time")
+            if sim_time_val is None or sim_time_val <= 0:
                 raise ValueError("Invalid simulation time. Must be a positive number.")
 
-            if not sim_params.get("num_neurons") or sim_params.get("num_neurons") <= 0:
+            num_neurons_val = sim_params.get("num_neurons")
+            if num_neurons_val is None or num_neurons_val <= 0:
                 raise ValueError("Invalid number of neurons. Must be a positive integer.")
 
             # ===== BUILD NEURONS =====
@@ -165,7 +173,9 @@ class SimulationEngine(QObject):
 
             # ===== SETUP INPUT CURRENT =====
             self.progress_updated.emit(25, "Configuring input currents...")
-            self.input_builder.setup_input_current(sim_params, self.neurons)
+            model_type = neuron_params.get("model_key", "lif")
+            self.input_builder.setup_input_current(sim_params, self.neurons, model_type)
+
 
             # ===== SETUP NOISE =====
             self.progress_updated.emit(35, "Adding noise...")
@@ -187,6 +197,7 @@ class SimulationEngine(QObject):
                 advanced_params,
                 synaptic_receptors_params,
                 short_term_plasticity_params,
+                calcium_dynamics_params,
                 self.neurons,
             )
 
@@ -213,7 +224,9 @@ class SimulationEngine(QObject):
 
             # ===== SETUP MONITORS =====
             self.progress_updated.emit(55, "Setting up monitors...")
-            self.monitors = self.monitor_builder.setup_monitors(self.neurons, self.synapses)
+            self.monitors = self.monitor_builder.setup_monitors(
+                self.neurons, self.synapses, monitors_params=monitors_params
+            )
 
             if not self.monitors:
                 raise RuntimeError("Failed to setup monitoring.")
@@ -233,10 +246,18 @@ class SimulationEngine(QObject):
             if input_sources:
                 if isinstance(input_sources, dict):
                     for key, obj in input_sources.items():
+                        # Add any Brian2 simulation object (NeuronGroup, Synapses, etc.)
+                        # We exclude TimedArray explicitly as it shouldn't be added to Network
+                        if isinstance(obj, b2.TimedArray):
+                            continue
+                            
                         if hasattr(obj, "custom_operation") or isinstance(
-                            obj, (b2.NeuronGroup, b2.Synapses, b2.PoissonGroup)
+                            obj, (b2.NeuronGroup, b2.Synapses, b2.PoissonGroup, b2.SpikeGeneratorGroup)
                         ):
-                            net_objects.append(obj)
+                             net_objects.append(obj)
+                        # Detect checkers/runners from run_regularly (which have 'code' attribute usually)
+                        elif hasattr(obj, "code") or hasattr(obj, "clock"):
+                             net_objects.append(obj)
 
             self.network = b2.Network(net_objects)
 
@@ -258,12 +279,19 @@ class SimulationEngine(QObject):
             self.progress_updated.emit(100, "Simulation completed successfully!")
             return results
 
+        except ValueError as e:
+            # Re-raise validation errors for proper error handling
+            raise
         except Exception as e:
             error_msg = f"Brian2 simulation failed: {str(e)}"
             self.progress_updated.emit(0, f"Error: {error_msg}")
             self.simulation_error.emit(error_msg)
             print(f"DEBUG: Simulation error - {error_msg}")
-            return None
+            import traceback
+            traceback.print_exc()
+            return {"error": str(e), "brian2_available": True, "success": False}
+
+
 
     def _run_with_progress_tracking(self, sim_time):
         """Run simulation with progress updates."""
@@ -305,36 +333,36 @@ class SimulationEngine(QObject):
             sim_time = sim_params.get("sim_time", 100)
 
             # Generate fake spike data
-            spike_times = {}
-            all_spike_times = []
-            all_spike_indices = []
+            spike_times = []
+            spike_indices = []
 
             for i in range(num_neurons):
                 n_spikes = np.random.randint(5, 20)
                 times = np.sort(np.random.uniform(0, sim_time, n_spikes))
-                spike_times[i] = times
-                all_spike_times.extend(times)
-                all_spike_indices.extend([i] * n_spikes)
+                spike_times.extend(times)
+                spike_indices.extend([i] * n_spikes)
 
             # Generate fake voltage traces
-            time_points = np.linspace(0, sim_time, 1000)
+            voltage_times = np.linspace(0, sim_time, 1000)
             voltage_traces = {}
             for i in range(min(10, num_neurons)):
-                base = -70 + np.random.randn(len(time_points)) * 5
+                base = -70 + np.random.randn(len(voltage_times)) * 5
                 voltage_traces[i] = base
 
             results = {
-                "spike_times": spike_times,
-                "spike_indices": np.array(all_spike_indices),
-                "all_spike_times": np.array(all_spike_times),
-                "time": time_points,
+                "spike_times": np.array(spike_times),
+                "spike_indices": np.array(spike_indices),
+                "voltage_times": voltage_times,
                 "voltage_traces": voltage_traces,
                 "statistics": {
-                    "total_spikes": len(all_spike_times),
-                    "mean_firing_rate": len(all_spike_times) / (sim_time / 1000 * num_neurons),
+                    "total_spikes": len(spike_times),
+                    "mean_firing_rate": len(spike_times) / (sim_time / 1000 * num_neurons),
                     "simulation_time": sim_time,
                     "num_neurons": num_neurons,
                 },
+                "timestamp": datetime.now().isoformat(),
+                "brian2_available": False,
+                "parameters": params,
             }
 
             self.progress_updated.emit(100, "Dummy simulation completed")

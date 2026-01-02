@@ -498,12 +498,5 @@ NEUROMODULATION_RESEARCH_INFO = {
         "validation_tests": "Test dose-response curves, temporal dynamics, and behavioral effects",
         "network_effects": "Neuromodulation can dramatically alter network dynamics and oscillations",
     },
-    "disease_associations": {
-        "parkinsons_disease": "Loss of dopaminergic neurons in substantia nigra",
-        "alzheimers_disease": "Cholinergic neuron degeneration and reduced ACh",
-        "depression": "Altered serotonin and noradrenaline signaling",
-        "schizophrenia": "Dopaminergic and cholinergic dysfunction",
-        "adhd": "Altered dopamine and noradrenaline function",
-        "addiction": "Dysregulated dopamine reward pathways",
-    },
+
 }

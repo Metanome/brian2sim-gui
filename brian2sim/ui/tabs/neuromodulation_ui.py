@@ -76,7 +76,7 @@ class NeuromodulationFormGenerator(BaseFormGenerator):
         )
 
         # 1. Main Enable Toggle
-        # 1. Main Enable Toggle
+
         has_enabled_toggle = "enabled" in self.config
         if has_enabled_toggle:
             enabled_config = self.config["enabled"]
@@ -176,13 +176,7 @@ class NeuromodulationFormGenerator(BaseFormGenerator):
             group_toggle_widget = None
             if toggle_key and toggle_key in self.config:
                 toggle_config = self.config[toggle_key]
-                # Force label "Enable X" or just use label from config if it's clear
-                # For "dopamine_system", label is "Dopamine System". We want "Enable Dopamine System"
-                # But if we use "Enable Dopamine System", it's distinct from the group title?
-                # The user wants check *inside* the box.
-                # Let's say "Enable This System" or similar?
-                # User's example: "Enable AMPA Receptors" inside "AMPA Receptors".
-                # So "Enable Dopamine System" inside "Dopamine System".
+                # Force label "Enable X"
 
                 toggle_widget = QCheckBox(f"Enable {group_title}")
                 toggle_widget.setToolTip(toggle_config.get("tooltip", ""))

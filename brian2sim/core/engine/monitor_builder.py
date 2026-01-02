@@ -3,6 +3,8 @@ Monitor Builder for Brian2 simulations.
 Handles setting up spike monitors, state monitors, and results collection.
 """
 
+from datetime import datetime
+
 try:
     import brian2 as b2
     import numpy as np
@@ -19,63 +21,131 @@ class MonitorBuilder:
     def __init__(self):
         self.monitors = {}
 
-    def setup_monitors(self, neurons, synapses=None, variables=None):
+    def setup_monitors(self, neurons, synapses=None, variables=None, monitors_params=None):
         """Setup monitoring of simulation variables."""
         if not BRIAN2_AVAILABLE:
             return {}
-
+            
+        monitors_params = monitors_params or {}
         monitors = {}
+        
+        # 1. Spike Recording
+        if monitors_params.get("record_spikes", True):
+            monitors["spike_monitor"] = b2.SpikeMonitor(neurons)
 
-        # Spike monitor
-        monitors["spike_monitor"] = b2.SpikeMonitor(neurons)
+        # 2. Determine Recording Subset (Indices)
+        record_subset_mode = monitors_params.get("record_subset", "all")
+        n_neurons = len(neurons)
+        record_indices = True  # Default to all
+        
+        if record_subset_mode == "first_n":
+            n = min(n_neurons, monitors_params.get("subset_n", 10))
+            record_indices = list(range(n))
+        elif record_subset_mode == "random_n":
+            n = min(n_neurons, monitors_params.get("subset_n", 10))
+            if n > 0:
+                record_indices = np.random.choice(n_neurons, size=n, replace=False).tolist()
+                record_indices.sort()
+        elif record_subset_mode == "indices":
+            idx_str = monitors_params.get("subset_indices", "0")
+            try:
+                indices = [int(x.strip()) for x in idx_str.split(",") if x.strip().isdigit()]
+                record_indices = [i for i in indices if 0 <= i < n_neurons]
+                if not record_indices:
+                    record_indices = [0] # Fallback
+            except ValueError:
+                record_indices = [0] # Fallback
+        
+        # Recording time step
+        rec_dt = monitors_params.get("record_dt", 0.1) * b2.ms
 
-        # State monitor for voltage
-        monitors["state_monitor"] = b2.StateMonitor(neurons, "v", record=True)
+        # 3. Voltage Recording
+        if monitors_params.get("record_voltage", True):
+            monitors["state_monitor"] = b2.StateMonitor(
+                neurons, "v", record=record_indices, dt=rec_dt
+            )
 
-        # Monitor additional variables if specified
+        # 4. Additional Variables
+        vars_to_record = []
         if variables:
-            for var in variables:
-                if hasattr(neurons, var):
-                    monitors[f"{var}_monitor"] = b2.StateMonitor(neurons, var, record=True)
+            vars_to_record.extend(variables)
+            
+        extra_vars_str = monitors_params.get("record_variables", "")
+        if extra_vars_str:
+            extra_vars = [x.strip() for x in extra_vars_str.split(",") if x.strip()]
+            vars_to_record.extend(extra_vars)
+            
+        # Deduplicate
+        vars_to_record = list(set(vars_to_record))
+        
+        for var in vars_to_record:
+            if hasattr(neurons, var):
+                monitors[f"{var}_monitor"] = b2.StateMonitor(
+                    neurons, var, record=record_indices, dt=rec_dt
+                )
 
-        # Monitor synaptic weights if synapses exist
-        if synapses is not None and hasattr(synapses, "w"):
-            monitors["weight_monitor"] = b2.StateMonitor(synapses, "w", record=True, dt=10 * b2.ms)
+        # 5. Synaptic Recording
+        if synapses is not None:
+             if monitors_params.get("record_synaptic", False):
+                 syn_vars_str = monitors_params.get("synaptic_variables", "w")
+                 syn_vars = [x.strip() for x in syn_vars_str.split(",") if x.strip()]
+                 
+                 for var in syn_vars:
+                     if hasattr(synapses, var):
+                         monitors[f"syn_{var}_monitor"] = b2.StateMonitor(
+                             synapses, var, record=True, dt=10 * b2.ms
+                         )
 
         self.monitors = monitors
         return monitors
-
+        
     def collect_results(self, monitors, params):
         """Collect simulation results from monitors."""
         if not monitors:
             return {}
 
         results = {
-            "spike_times": {},
-            "spike_indices": [],
-            "voltage_traces": {},
-            "time": None,
             "statistics": {},
+            "timestamp": datetime.now().isoformat(),
+            "brian2_available": BRIAN2_AVAILABLE,
+            "parameters": params,
+            "raw_data": {} # New container for generic results
         }
+        
+        # Iterate over all monitors
+        for name, monitor in monitors.items():
+            # 1. SpikeMonitor
+            if isinstance(monitor, b2.SpikeMonitor):
+                # Convert to numpy arrays immediately
+                t_data = np.array(monitor.t / b2.ms) # Store logic: Time is always ms
+                i_data = np.array(monitor.i)
+                
+                results["raw_data"][name] = {
+                    "type": "spikes",
+                    "t": t_data,
+                    "i": i_data,
+                    "count": monitor.num_spikes
+                }
 
-        # Get spike data
-        if "spike_monitor" in monitors:
-            spike_mon = monitors["spike_monitor"]
-            results["spike_times"] = {
-                i: np.array(spike_mon.t[spike_mon.i == i] / b2.ms)
-                for i in range(len(np.unique(spike_mon.i)))
-            }
-            results["spike_indices"] = np.array(spike_mon.i)
-            results["all_spike_times"] = np.array(spike_mon.t / b2.ms)
-
-        # Get voltage traces
-        if "state_monitor" in monitors:
-            state_mon = monitors["state_monitor"]
-            results["time"] = np.array(state_mon.t / b2.ms)
-            results["voltage_traces"] = {
-                i: np.array(state_mon.v[i] / b2.mV)
-                for i in range(min(10, len(state_mon.v)))  # Limit to first 10 neurons
-            }
+            # 2. StateMonitor
+            elif isinstance(monitor, b2.StateMonitor):
+                # Get time array (ms)
+                t_data = np.array(monitor.t / b2.ms)
+                
+                for var_name in monitor.record_variables:
+                    # Access data: monitor.varname
+                    data_attr = getattr(monitor, var_name)
+                    
+                    # Convert to dimensionless base units (e.g., Volts, Amps)
+                    data_values = np.array(data_attr)
+                    
+                    results["raw_data"][f"{name}_{var_name}"] = {
+                        "type": "trace",
+                        "t": t_data,
+                        "values": data_values, # 2D array [neuron_idx, time]
+                        "unit": str(data_attr.unit) if hasattr(data_attr, "unit") else "1",
+                        "indices": np.array(monitor.record) if hasattr(monitor, "record") else []
+                    }
 
         # Calculate statistics
         results["statistics"] = self._calculate_statistics(monitors, params)

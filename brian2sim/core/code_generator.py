@@ -127,7 +127,7 @@ class CodeGenerator:
         lines = ["    # Create neuron group"]
 
         num_neurons = sim_params.get("num_neurons", 1)
-        model_type = neuron_params.get("model_type", "lif")
+        model_type = neuron_params.get("model_key", "lif")
 
         if model_type == "lif":
             threshold = neuron_params.get("lif_threshold", -50)

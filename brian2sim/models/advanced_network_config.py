@@ -184,7 +184,7 @@ STDP_CONFIG = {
         "Typical range: 10-50 ms, affects LTP window duration.",
     },
     "A_plus": {
-        "label": "LTP Amplitude:",
+        "label": "LTP Amplitude (nS):",
         "type": "double",
         "default": 0.01,
         "min": 0.001,
@@ -194,7 +194,7 @@ STDP_CONFIG = {
         "Typical range: 0.005-0.02 for additive STDP.",
     },
     "A_minus": {
-        "label": "LTD Amplitude:",
+        "label": "LTD Amplitude (nS):",
         "type": "double",
         "default": 0.0105,
         "min": 0.001,
@@ -204,7 +204,7 @@ STDP_CONFIG = {
         "Often slightly larger than LTP (1.05x) to maintain balance.",
     },
     "w_min": {
-        "label": "Minimum Weight:",
+        "label": "Minimum Weight (nS):",
         "type": "double",
         "default": 0.0,
         "min": -10.0,
@@ -214,7 +214,7 @@ STDP_CONFIG = {
         "Prevents weights from becoming too negative.",
     },
     "w_max": {
-        "label": "Maximum Weight:",
+        "label": "Maximum Weight (nS):",
         "type": "double",
         "default": 5.0,
         "min": 1.0,

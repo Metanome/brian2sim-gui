@@ -392,11 +392,5 @@ HOMEOSTATIC_PLASTICITY_RESEARCH_INFO = {
         "stability_considerations": "Balance between homeostatic regulation and learning capability",
         "validation_tests": "Test network stability, firing rate distributions, and adaptation to perturbations",
     },
-    "disease_associations": {
-        "autism_spectrum_disorders": "Impaired excitation/inhibition balance and synaptic scaling",
-        "epilepsy": "Failed homeostatic compensation leading to hyperexcitability",
-        "alzheimer_disease": "Progressive loss of homeostatic mechanisms",
-        "depression": "Altered stress response and homeostatic adaptation",
-        "schizophrenia": "Disrupted inhibitory homeostasis and network stability",
-    },
+
 }

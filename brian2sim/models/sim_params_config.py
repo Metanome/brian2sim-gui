@@ -39,6 +39,41 @@ SIM_PARAMS_CONFIG = {
         "default": "python",
         "tooltip": "Execution mode for Brian2:\n• Python: Default, good for debugging\n• C++ Standalone: Compiles to C++, ~10x faster\n• C++ Parallel: Uses OpenMP for multi-threading",
     },
+    "dt": {
+        "label": "Time Step (ms):",
+        "type": "double",
+        "default": 0.1,
+        "min": 0.001,
+        "max": 1.0,
+        "step": 0.01,
+        "decimals": 3,
+        "tooltip": "Simulation time step (dt) in milliseconds.\n"
+        "Smaller values = more accurate but slower.\n"
+        "• 0.1 ms: Standard for most simulations\n"
+        "• 0.01 ms: High precision for fast dynamics\n"
+        "• 0.5-1.0 ms: Fast but less accurate",
+    },
+    "integration_method": {
+        "label": "Integration Method:",
+        "type": "combo",
+        "options": ["auto", "exact", "euler", "rk2", "rk4", "heun", "milstein"],
+        "display_options": [
+            "Auto (Recommended)",
+            "Exact (Linear ODEs)",
+            "Euler (Fast)",
+            "Runge-Kutta 2nd Order",
+            "Runge-Kutta 4th Order",
+            "Heun (Stochastic)",
+            "Milstein (Stochastic)",
+        ],
+        "default": "auto",
+        "tooltip": "Numerical integration method for differential equations:\n"
+        "• Auto: Brian2 chooses optimal method\n"
+        "• Exact: For linear equations only\n"
+        "• Euler: Fast, first-order accuracy\n"
+        "• RK2/RK4: Higher accuracy\n"
+        "• Heun/Milstein: For stochastic equations",
+    },
     "input_current": {
         "label": "Input Current (nA):",
         "type": "double",
@@ -93,6 +128,23 @@ SIM_PARAMS_CONFIG = {
         "step": 1.0,
         "decimals": 1,
         "tooltip": "Post-spike reset potential. Should be below threshold, typically -65 to -70 mV.",
-        "depends_on": {"neuron_model": "lif"},  # Show only when LIF model is selected
+        "depends_on": {"neuron_model": ["lif", "adex"]},  # Show for LIF and AdEx
+    },
+    # State Management
+    "store_state": {
+        "label": "Store State Name:",
+        "type": "text",
+        "default": "",
+        "tooltip": "Name to store the final network state under.\\n"
+        "Allows restoring this state in future simulations.\\n"
+        "Leave empty to disable.",
+    },
+    "restore_state": {
+        "label": "Restore State Name:",
+        "type": "text",
+        "default": "",
+        "tooltip": "Name of a previously stored state to restore at start.\\n"
+        "Useful for continuing simulations or parameter sweeps.\\n"
+        "Leave empty to start from scratch.",
     },
 }

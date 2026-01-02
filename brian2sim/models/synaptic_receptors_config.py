@@ -247,4 +247,33 @@ SYNAPTIC_RECEPTORS_CONFIG = {
         "Usually weaker than GABA_A but longer lasting.",
         "depends_on": {"gaba_b_enabled": True},
     },
+    # Custom Synapse Model
+    "custom_synapse_enabled": {
+        "label": "Custom Synapse Model",
+        "type": "bool",
+        "default": False,
+        "tooltip": "Definition of custom synaptic equations (overrides standard receptors).",
+        "depends_on": {"enabled": True},
+    },
+    "custom_synapse_eqs": {
+        "label": "Equations:",
+        "type": "text",
+        "default": "w : siemens\ndg/dt = -g/tau : siemens\nI_syn = g * (0*mV - v_post) : amp",
+        "tooltip": "Custom Brian2 equations for the synapse.\nModel must define I_syn (current) or g (conductance).",
+        "depends_on": {"enabled": True, "custom_synapse_enabled": True},
+    },
+    "custom_on_pre": {
+        "label": "On Pre:",
+        "type": "text",
+        "default": "g += w",
+        "tooltip": "Code to run on pre-synaptic spike.\nExample: g += w",
+        "depends_on": {"enabled": True, "custom_synapse_enabled": True},
+    },
+    "custom_on_post": {
+        "label": "On Post:",
+        "type": "text",
+        "default": "",
+        "tooltip": "Code to run on post-synaptic spike (optional).",
+        "depends_on": {"enabled": True, "custom_synapse_enabled": True},
+    },
 }

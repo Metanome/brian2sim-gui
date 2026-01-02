@@ -92,6 +92,16 @@ class ConfigManager:
 
         return config_data
 
+    def save_config_to_file(self, file_path):
+        """
+        Convenience method to gather current config from GUI and save to file.
+        
+        Args:
+            file_path (str): The path to save the configuration to
+        """
+        config_data = self._get_current_config()
+        self.save_config(config_data, file_path)
+
     def save_config(self, config_data, file_path):
         """
         Save configuration data to a JSON file.

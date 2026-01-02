@@ -11,8 +11,48 @@ from PyQt6.QtWidgets import (
     QSpinBox,
     QTextEdit,
     QVBoxLayout,
+    QVBoxLayout,
     QWidget,
+    QPushButton,
+    QFileDialog,
 )
+
+
+class FilePickerWidget(QWidget):
+    """A widget combining a line edit and a file browse button."""
+
+    def __init__(self, parent=None, placeholder="", file_filter="All Files (*)"):
+        super().__init__(parent)
+        self.layout = QHBoxLayout(self)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        
+        self.line_edit = QLineEdit()
+        self.line_edit.setPlaceholderText(placeholder)
+        self.browse_btn = QPushButton("...")
+        self.browse_btn.setFixedWidth(30)
+        self.browse_btn.clicked.connect(self.browse_file)
+        
+        self.layout.addWidget(self.line_edit)
+        self.layout.addWidget(self.browse_btn)
+        
+        self.file_filter = file_filter
+
+    def browse_file(self):
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Select File", "", self.file_filter
+        )
+        if file_path:
+            self.line_edit.setText(file_path)
+
+    def text(self):
+        return self.line_edit.text()
+
+    def setText(self, text):
+        self.line_edit.setText(text)
+        
+    @property
+    def textChanged(self):
+        return self.line_edit.textChanged
 
 
 class BaseFormGenerator(QWidget):
@@ -107,6 +147,11 @@ class BaseFormGenerator(QWidget):
                 input_widget.addItem(display_text, userData=option)
             if default_value is not None and default_value in options:
                 input_widget.setCurrentIndex(options.index(default_value))
+        elif param_type == "file":
+             file_filter = param_config.get("filter", "All Files (*)")
+             input_widget = FilePickerWidget(file_filter=file_filter)
+             if default_value is not None:
+                 input_widget.setText(str(default_value))
         elif param_type == str and param_key == "custom_eqs":
             input_widget = QTextEdit()
             input_widget.setMinimumHeight(80)
@@ -216,7 +261,6 @@ class BaseFormGenerator(QWidget):
                             target_widget, target_label, target_cell, conditions
                         ):
                             def handler():
-                                # Check ALL conditions (AND logic)
                                 all_satisfied = True
                                 for c_widget, exp_val in conditions:
                                     current_val = None
@@ -277,7 +321,7 @@ class BaseFormGenerator(QWidget):
                                     else:
                                         target_cell.setVisible(show)
                                 else:
-                                    # Simple form layout - just control widget/label visibility
+                                    # Simple form layout: Control widget/label visibility
                                     if target_widget:
                                         target_widget.setVisible(show)
                                     if target_label:
@@ -314,7 +358,6 @@ class BaseFormGenerator(QWidget):
 
         def reset_to_custom_state():
             if preset_combo.count() > 0 and preset_combo.currentIndex() != 0:
-                # Check if "Custom" or a similar placeholder is at index 0
                 if (
                     "custom" in preset_combo.itemText(0).lower()
                     or "select" in preset_combo.itemText(0).lower()
@@ -335,7 +378,7 @@ class BaseFormGenerator(QWidget):
                 widget.currentIndexChanged.connect(reset_to_custom_state)
             elif hasattr(widget, "stateChanged"):  # QCheckBox
                 widget.stateChanged.connect(reset_to_custom_state)
-            elif hasattr(widget, "textChanged"):  # QLineEdit, QTextEdit
+            elif hasattr(widget, "textChanged"):  # QLineEdit, QTextEdit, FilePickerWidget
                 widget.textChanged.connect(reset_to_custom_state)
 
     def get_form_widget(self, key=None):
@@ -380,6 +423,8 @@ class BaseFormGenerator(QWidget):
                     widget.setText(str(value))
                 elif isinstance(widget, QLineEdit):
                     widget.setText(str(value))
+                elif isinstance(widget, FilePickerWidget):
+                    widget.setText(str(value))
 
     def get_params_for_save(self, key=None):
         param_widgets_to_save = self.get_param_widgets(key)
@@ -398,6 +443,8 @@ class BaseFormGenerator(QWidget):
             elif isinstance(widget, QTextEdit):
                 params_to_save[param_key] = widget.toPlainText()
             elif isinstance(widget, QLineEdit):
+                params_to_save[param_key] = widget.text()
+            elif isinstance(widget, FilePickerWidget):
                 params_to_save[param_key] = widget.text()
         return params_to_save
 
@@ -519,10 +566,7 @@ class NoiseOptionsFormGenerator(BaseFormGenerator):
         # Create the 'params_group_widget' that will contain the grid of parameters
         self.params_group_widget = QWidget()  # Store as instance variable for access
 
-        # Check if "enabled" toggle exists in config
-        has_enabled_toggle = "enabled" in self.config
-
-        if has_enabled_toggle:
+        if "enabled" in self.config:
             enabled_config = self.config["enabled"]
             enable_checkbox = self._create_widget_for_param("enabled", enabled_config)
 
@@ -619,7 +663,7 @@ class NetworkOptionsFormGenerator(BaseFormGenerator):
         self.param_labels["main"] = {}
 
         # Create the params group widget that will contain all the parameter widgets
-        self.params_group_widget = QWidget()  # Check if "enabled" toggle exists in config
+        self.params_group_widget = QWidget()
         has_enabled_toggle = "enabled" in self.config
         if has_enabled_toggle:
             enabled_config = self.config["enabled"]

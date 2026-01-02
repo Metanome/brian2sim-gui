@@ -33,24 +33,22 @@ class MenuBarManager(QObject):
 
         # File menu
         file_menu = menubar.addMenu("File")
-        file_menu.addAction("New Simulation", self.new_simulation)
-        file_menu.addAction("Open Configuration", self.main_window.config_manager.load_config)
-        file_menu.addAction("Save Configuration", self.main_window.config_manager.save_config)
+        file_menu.addAction("New", self.new_simulation)
+        file_menu.addAction("Open...", self.main_window.load_configuration)
+        file_menu.addAction("Save...", self.main_window.save_configuration)
         file_menu.addSeparator()
         file_menu.addAction("Exit", self.main_window.close)
 
-        # Tools menu
-        tools_menu = menubar.addMenu("Tools")
-        tools_menu.addAction("Validate Parameters", self.show_validation_dialog)
-        tools_menu.addAction("Export Configuration", self.export_config)
-        tools_menu.addAction("Generate Code", self.generate_code)
-        tools_menu.addSeparator()
-        tools_menu.addAction("Reset to Defaults", self.reset_to_defaults)
+        # Simulation menu
+        simulation_menu = menubar.addMenu("Simulation")
+        simulation_menu.addAction("Run", self.run_simulation)
+        simulation_menu.addAction("Validate Parameters", self.show_validation_dialog)
+        simulation_menu.addAction("Generate Code", self.generate_code)
 
         # View menu
         view_menu = menubar.addMenu("View")
 
-        # User Level submenu
+        # User Level submenu - provides experience-based tab visibility
         user_level_menu = view_menu.addMenu("User Level")
         user_level_menu.addAction(
             "Beginner (Core + Simulation)", lambda: self.set_user_level("beginner")
@@ -62,35 +60,24 @@ class MenuBarManager(QObject):
             "Advanced (All Features)", lambda: self.set_user_level("advanced")
         )
 
-        view_menu.addSeparator()
-
-        # Individual tab visibility controls
-        # Note: Core and Simulation tabs are always visible (essential)
-        view_menu.addAction("Core Tab (Always Visible)", lambda: self.show_tab_info("core"))
-        view_menu.addAction(
-            "Simulation Tab (Always Visible)", lambda: self.show_tab_info("simulation")
-        )
-        view_menu.addSeparator()
-        view_menu.addAction("Toggle Network Tab", lambda: self.toggle_tab_visibility("network"))
-        view_menu.addAction("Toggle Synapses Tab", lambda: self.toggle_tab_visibility("synapses"))
-        view_menu.addAction(
-            "Toggle Plasticity Tab", lambda: self.toggle_tab_visibility("plasticity")
-        )
-        view_menu.addAction(
-            "Toggle Neuromodulation Tab", lambda: self.toggle_tab_visibility("neuromodulation")
-        )
-        view_menu.addAction(
-            "Toggle Multi-Compartment Tab", lambda: self.toggle_tab_visibility("multicompartment")
-        )
-
         # Help menu
         help_menu = menubar.addMenu("Help")
         help_menu.addAction("User Guide", self.show_user_guide)
         help_menu.addAction("Parameter Reference", self.show_parameter_reference)
-        help_menu.addAction("Keyboard Shortcuts", self.show_shortcuts)
         help_menu.addSeparator()
         help_menu.addAction("About Brian2", self.show_about_brian2)
         help_menu.addAction("About", self.show_about)
+
+    def run_simulation(self):
+        """Start the simulation."""
+        if hasattr(self.main_window, "simulation_manager"):
+            self.main_window.simulation_manager.start_simulation()
+        else:
+            QMessageBox.warning(
+                self.main_window,
+                "Simulation Error",
+                "Simulation manager not available."
+            )
 
     def new_simulation(self):
         """Create a new simulation with default parameters."""
@@ -105,14 +92,20 @@ class MenuBarManager(QObject):
 
         if reply == QMessageBox.StandardButton.Yes:
             try:
-                # Reset all manager parameters to defaults
-                self.main_window.neuron_models_manager.reset_to_defaults()
-                self.main_window.sim_params_manager.reset_to_defaults()
-                self.main_window.noise_options_manager.reset_to_defaults()
-                if hasattr(self.main_window, "input_patterns_manager"):
-                    self.main_window.input_patterns_manager.reset_to_defaults()
-                self.main_window.network_options_manager.reset_to_defaults()
-                self.main_window.advanced_network_manager.reset_to_defaults()
+                # Reset all manager parameters to defaults (check if method exists)
+                core_managers = [
+                    "neuron_models_manager",
+                    "sim_params_manager",
+                    "noise_options_manager",
+                    "input_patterns_manager",
+                    "network_options_manager",
+                    "advanced_network_manager",
+                ]
+                for manager_name in core_managers:
+                    if hasattr(self.main_window, manager_name):
+                        manager = getattr(self.main_window, manager_name)
+                        if hasattr(manager, "reset_to_defaults"):
+                            manager.reset_to_defaults()
 
                 # Reset additional managers if they exist
                 for manager_name in [

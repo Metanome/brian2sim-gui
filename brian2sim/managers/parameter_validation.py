@@ -13,10 +13,11 @@ from PyQt6.QtWidgets import QMessageBox
 class ValidationResult:
     """Represents the result of a parameter validation."""
 
-    def __init__(self, is_valid: bool = True, message: str = "", severity: str = "error"):
+    def __init__(self, is_valid: bool = True, message: str = "", severity: str = "error", parameter: str = ""):
         self.is_valid = is_valid
         self.message = message
         self.severity = severity  # "error", "warning", "info"
+        self.parameter = parameter  # Name of the parameter being validated
 
     def __bool__(self):
         return self.is_valid

@@ -11,19 +11,23 @@ from PyQt6.QtWidgets import QLabel, QVBoxLayout
 
 # Handle optional matplotlib imports
 try:
-    pass
-
+    import matplotlib
+    matplotlib.use('Agg')  # Use non-interactive backend
+    import matplotlib.pyplot as plt
+    from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
+    from matplotlib.figure import Figure
     MATPLOTLIB_AVAILABLE = True
 except ImportError:
     MATPLOTLIB_AVAILABLE = False
 
 # Handle optional numpy import
 try:
-    pass
-
+    import numpy as np
     NUMPY_AVAILABLE = True
 except ImportError:
     NUMPY_AVAILABLE = False
+
+from brian2sim.ui.tabs.simulation_ui import create_plot_widget
 
 
 class ResultsManager:
@@ -32,6 +36,7 @@ class ResultsManager:
     def __init__(self, main_window):
         self.main_window = main_window
         self.current_results = None
+        self.dynamic_widgets = {}  # Store references to dynamically created plot widgets
 
     def update_plots(self, results_data):
         """Update all plot displays with new simulation results."""
@@ -47,7 +52,18 @@ class ResultsManager:
 
             # Update voltage traces plot
             self._update_voltage_plot(results_data)
-
+            
+            # Dynamic Plots from raw_data
+            if "raw_data" in results_data:
+                for key, info in results_data["raw_data"].items():
+                    # Skip if it's the standard voltage/spikes which are handled above
+                    # (Unless we want to double plot? No, standard ones are fine)
+                    if key in ["spike_monitor", "state_monitor_v"]:
+                         continue
+                         
+                    if info.get("type") == "trace":
+                        self._update_generic_trace_plot(key, info)
+                        
         except Exception as e:
             print(f"Error updating plots: {e}")
 
@@ -126,11 +142,13 @@ class ResultsManager:
         # Create new axes
         ax = widget.figure.add_subplot(111)
 
-        # Get spike data
-        spike_times = results_data.get("spike_times", [])
-        spike_indices = results_data.get("spike_indices", [])
+        # Get spike data from raw_data
+        raw = results_data.get("raw_data", {})
+        spikes_data = raw.get("spike_monitor", {})
+        spike_times = spikes_data.get("t", [])
+        spike_indices = spikes_data.get("i", [])
 
-        if spike_times and spike_indices:
+        if len(spike_times) > 0 and len(spike_indices) > 0:
             # Create raster plot
             ax.scatter(spike_times, spike_indices, s=10, alpha=0.7, c="black")
             ax.set_xlabel("Time (ms)")
@@ -139,9 +157,9 @@ class ResultsManager:
             ax.grid(True, alpha=0.3)
 
             # Set reasonable limits
-            if spike_times:
+            if len(spike_times) > 0:
                 ax.set_xlim(0, max(spike_times) * 1.05)
-            if spike_indices:
+            if len(spike_indices) > 0:
                 ax.set_ylim(-0.5, max(spike_indices) + 0.5)
         else:
             # No spikes to display
@@ -176,11 +194,24 @@ class ResultsManager:
         # Create new axes
         ax = widget.figure.add_subplot(111)
 
-        # Get voltage data
-        voltage_times = results_data.get("voltage_times", [])
-        voltage_traces = results_data.get("voltage_traces", {})
+        # Get voltage data from raw_data
+        raw = results_data.get("raw_data", {})
+        v_data = raw.get("state_monitor_v", {})
+        voltage_times = v_data.get("t", [])
+        
+        voltage_traces = {}
+        values = v_data.get("values")
+        indices = v_data.get("indices", [])
+        
+        if values is not None and len(values) > 0:
+            # Limit to first 20 traces if many
+            n_traces = min(len(values), 20)
+            for i in range(n_traces):
+                nid = indices[i] if i < len(indices) else i
+                # Convert V to mV for display
+                voltage_traces[int(nid)] = values[i] * 1000
 
-        if voltage_times and voltage_traces:
+        if len(voltage_times) > 0 and voltage_traces:
             # Plot voltage traces for each monitored neuron
             colors = ["blue", "red", "green", "orange", "purple", "brown", "pink", "gray"]
 
@@ -232,6 +263,65 @@ class ResultsManager:
         widget.figure.tight_layout()
         widget.canvas.draw()
 
+    def _update_generic_trace_plot(self, key, info):
+        """Update or create a generic trace plot for custom variables."""
+        # Clean key for display (e.g. state_monitor_g_Ca -> g_Ca)
+        display_name = key.replace("state_monitor_", "").replace("monitor_", "")
+        
+        # Check if widget exists
+        if key not in self.dynamic_widgets:
+            # check if main window has results tabs
+            if not hasattr(self.main_window, "results_tabs"): return
+            
+            # Create new widget
+            widget = create_plot_widget(f"{display_name} Traces")
+            self.main_window.results_tabs.addTab(widget, display_name)
+            self.dynamic_widgets[key] = widget
+            
+        widget = self.dynamic_widgets[key]
+        if not widget.figure: return
+        
+        # Clear
+        widget.figure.clear()
+        ax = widget.figure.add_subplot(111)
+        
+        # Data
+        t = info.get("t")
+        values = info.get("values")
+        unit = info.get("unit", "")
+        indices = info.get("indices", [])
+        
+        if t is not None and values is not None:
+            # Plot first 20 traces
+            num_traces = min(len(values), 20)
+            colors = ["blue", "red", "green", "orange", "purple", "brown", "pink", "gray"]
+            
+            for i in range(num_traces):
+                neuron_idx = indices[i] if len(indices) > i else i
+                color = colors[i % len(colors)]
+                ax.plot(
+                    t, 
+                    values[i], 
+                    label=f"Neuron {neuron_idx}",
+                    color=color,
+                    alpha=0.7,
+                    linewidth=1.0
+                )
+            
+            ax.set_xlabel("Time (ms)")
+            ax.set_ylabel(f"{display_name} ({unit})")
+            ax.set_title(f"{display_name} Traces")
+            ax.grid(True, alpha=0.3)
+            
+            if num_traces > 0:
+                ax.legend(loc="upper right", fontsize=8)
+                
+        else:
+            ax.text(0.5, 0.5, "No data", transform=ax.transAxes)
+            
+        widget.figure.tight_layout()
+        widget.canvas.draw()
+
     def _calculate_statistics(self, results_data):
         """Calculate and format simulation statistics."""
         stats_lines = []
@@ -258,19 +348,21 @@ class ResultsManager:
             stats_lines.append(f"Neuron Model: {neuron_params.get('model_key', 'N/A')}")
 
         # Spike statistics
-        spike_times = results_data.get("spike_times", [])
-        spike_indices = results_data.get("spike_indices", [])
+        raw = results_data.get("raw_data", {})
+        spikes_data = raw.get("spike_monitor", {})
+        spike_times = spikes_data.get("t", [])
+        spike_indices = spikes_data.get("i", [])
 
         stats_lines.append(f"\n=== SPIKE ANALYSIS ===")
         stats_lines.append(f"Total Spikes: {len(spike_times)}")
 
-        if spike_times and sim_params.get("sim_time"):
+        if len(spike_times) > 0 and sim_params.get("sim_time"):
             sim_duration_s = sim_params["sim_time"] / 1000.0  # Convert ms to seconds
             total_firing_rate = len(spike_times) / sim_duration_s
             stats_lines.append(f"Overall Firing Rate: {total_firing_rate:.2f} Hz")
 
         # Per-neuron statistics
-        if spike_indices:
+        if len(spike_indices) > 0:
             unique_neurons = set(spike_indices)
             stats_lines.append(f"Active Neurons: {len(unique_neurons)}")
 

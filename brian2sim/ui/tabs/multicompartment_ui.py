@@ -81,7 +81,7 @@ class MulticompartmentFormGenerator(BaseFormGenerator):
 
                 param_widgets["enabled"] = enable_checkbox
 
-                # Connect checkbox to show/hide params group (only if it's actually a checkbox)
+                # Connect checkbox to show/hide params group
                 if hasattr(enable_checkbox, "stateChanged"):
                     enable_checkbox.stateChanged.connect(
                         lambda state: self.params_group_widget.setVisible(state == 2)

@@ -5,6 +5,9 @@ Coordinates simulation execution, progress tracking, and results management.
 
 import json
 import time
+import csv
+import os
+import numpy as np
 from datetime import datetime, timedelta
 
 from PyQt6.QtCore import QObject, QTimer, pyqtSignal
@@ -358,6 +361,12 @@ class SimulationManager(QObject):
             params["multicompartment"] = self.main_window.multicompartment_ui.get_params_for_save()
         else:
             params["multicompartment"] = {"enabled": False}
+            
+        # Add monitors parameters
+        if hasattr(self.main_window, "monitors_manager"):
+            params["monitors"] = self.main_window.monitors_manager.get_params_for_save()
+        else:
+            params["monitors"] = {}
 
         return params
 
@@ -399,9 +408,57 @@ class SimulationManager(QObject):
             json.dump(self.simulation_data, f, indent=2, default=str)
 
     def _export_to_csv(self, file_path):
-        """Export simulation data to CSV format."""
-        # This would need to be implemented based on the specific data structure
-        # For now, just save as JSON with .csv extension
+        """Export simulation data to CSV format (multi-file)."""
+        base_path, _ = os.path.splitext(file_path)
+        data = self.simulation_data
+        
+        if "raw_data" not in data:
+            self.log_message.emit("No raw data found to export.")
+            return
+
+        for key, info in data["raw_data"].items():
+            try:
+                # Sanitized filename
+                safe_key = "".join([c if c.isalnum() else "_" for c in key])
+                curr_path = f"{base_path}_{safe_key}.csv"
+                
+                if info.get("type") == "spikes":
+                     # Export Spikes
+                     with open(curr_path, 'w', newline='') as f:
+                        writer = csv.writer(f)
+                        writer.writerow(["Neuron Index", "Spike Time (ms)"])
+                        rows = zip(info.get("i", []), info.get("t", []))
+                        writer.writerows(rows)
+                        
+                elif info.get("type") == "trace":
+                     # Export Trace
+                     with open(curr_path, 'w', newline='') as f:
+                        writer = csv.writer(f)
+                        t_arr = info.get("t")
+                        if t_arr is None: continue
+                        
+                        values = info.get("values")
+                        indices = info.get("indices", [])
+                        
+                        # Header
+                        labels = [f"Neuron_{idx}" for idx in indices]
+                        header = ["Time (ms)"] + labels
+                        writer.writerow(header)
+                        
+                        # Rows
+                        num_time = len(t_arr)
+                        num_traces = len(values)
+                        
+                        for i in range(num_time):
+                             row = [t_arr[i]]
+                             for tr in range(num_traces):
+                                 row.append(values[tr][i])
+                             writer.writerow(row)
+                             
+            except Exception as e:
+                 self.log_message.emit(f"Error exporting {key}: {str(e)}")
+
+        self.log_message.emit(f"Parameters and data structure also saved to {file_path} (JSON)")
         self._export_to_json(file_path)
 
     def _simulate_progress_for_testing(self):
@@ -420,9 +477,7 @@ class SimulationManager(QObject):
             self.test_timer.stop()
             # Simulate completion with dummy data
             dummy_data = {
-                "spike_times": [],
-                "spike_indices": [],
-                "voltage_traces": [],
+                "raw_data": {},
                 "parameters": self._collect_simulation_parameters(),
                 "timestamp": datetime.now().isoformat(),
             }

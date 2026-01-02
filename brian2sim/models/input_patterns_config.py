@@ -14,18 +14,22 @@ INPUT_PATTERNS_CONFIG = {
         "label": "Input Pattern Type:",
         "type": "combo",
         "default": "poisson",
-        "options": ["poisson", "rhythmic", "burst", "step"],
+        "options": ["poisson", "rhythmic", "burst", "step", "timed_array", "spike_generator"],
         "display_options": [
             "Poisson Spike Trains",
             "Rhythmic Oscillations",
             "Burst Stimulation",
             "Step Current",
+            "Timed Array (Variable)",
+            "Spike Generator (Precise)",
         ],
         "tooltip": "Type of input stimulation pattern:\n"
         "• Poisson: Random spike trains (most physiological)\n"
         "• Rhythmic: Oscillatory inputs (alpha, beta, gamma rhythms)\n"
         "• Burst: Brief high-frequency stimulation\n"
-        "• Step: Step current changes",
+        "• Step: Step current changes\n"
+        "• Timed Array: Arbitrary time-varying current\n"
+        "• Spike Generator: Precise spike times",
         "depends_on": {"enabled": True},
     },
     # Poisson Spike Train Parameters
@@ -165,5 +169,55 @@ INPUT_PATTERNS_CONFIG = {
         "tooltip": "Comma-separated list of step durations in ms.\n"
         "Must match the number of current levels.",
         "depends_on": {"enabled": True, "pattern_type": "step"},
+    },
+    # Timed Array Parameters
+    "timed_values": {
+        "label": "Time-Varying Values (nA):",
+        "type": "text",
+        "default": "0, 0.2, 0.5, 0.2, 0",
+        "tooltip": "Comma-separated list of current values at each time step.",
+        "depends_on": {"enabled": True, "pattern_type": "timed_array"},
+    },
+    "timed_dt": {
+        "label": "Time Step (ms):",
+        "type": "double",
+        "default": 1.0,
+        "min": 0.01,
+        "max": 100.0,
+        "step": 0.1,
+        "decimals": 2,
+        "tooltip": "Time step size for the timed array values.",
+        "depends_on": {"enabled": True, "pattern_type": "timed_array"},
+    },
+    "timed_array_file_path": {
+        "label": "Load from File:",
+        "type": "file",
+        "default": "",
+        "filter": "Data Files (*.npy *.csv *.txt);;All Files (*)",
+        "tooltip": "Load time-varying signal from file (overrides text input).\nFormats:\n• .npy: 1D or 2D array\n• .csv: Single column or multiple columns",
+        "depends_on": {"enabled": True, "pattern_type": "timed_array"},
+    },
+    # Spike Generator Parameters
+    "spike_indices": {
+        "label": "Spike Indices:",
+        "type": "text",
+        "default": "0, 0, 1, 2",
+        "tooltip": "Comma-separated list of neuron indices that spike.",
+        "depends_on": {"enabled": True, "pattern_type": "spike_generator"},
+    },
+    "spike_times": {
+        "label": "Spike Times (ms):",
+        "type": "text",
+        "default": "10, 20, 15, 30",
+        "tooltip": "Comma-separated list of spike times (must match indices length).",
+        "depends_on": {"enabled": True, "pattern_type": "spike_generator"},
+    },
+    "spike_file_path": {
+        "label": "Load from File:",
+        "type": "file",
+        "default": "",
+        "filter": "Data Files (*.npy *.csv *.txt);;All Files (*)",
+        "tooltip": "Load spikes from file (overrides text input).\nFormats:\n• .npy: Dict {'indices':[], 'times':[]} or array\n• .csv: Columns 'index', 'time'",
+        "depends_on": {"enabled": True, "pattern_type": "spike_generator"},
     },
 }

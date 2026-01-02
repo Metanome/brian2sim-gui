@@ -378,8 +378,9 @@ MULTICOMPARTMENT_CONFIG = {
     },
     # Morphology file options
     "morphology_file": {
-        "type": "str",
+        "type": "file",
         "default": "",
+        "filter": "Morphology Files (*.swc *.hoc);;All Files (*)",
         "description": "Morphology file path",
         "tooltip": "Path to SWC or HOC morphology file (optional)",
     },
@@ -392,31 +393,6 @@ MULTICOMPARTMENT_CONFIG = {
         "tooltip": "Scale factor for imported morphology",
     },
     # Advanced options
-    "temperature": {
-        "type": "float",
-        "default": 37.0,
-        "min": 20.0,
-        "max": 42.0,
-        "unit": "°C",
-        "description": "Temperature",
-        "tooltip": "Temperature for kinetic rate corrections",
-    },
-    "q10_nav": {
-        "type": "float",
-        "default": 3.0,
-        "min": 1.0,
-        "max": 5.0,
-        "description": "Q10 for Nav channels",
-        "tooltip": "Temperature coefficient for sodium channels",
-    },
-    "q10_kv": {
-        "type": "float",
-        "default": 2.5,
-        "min": 1.0,
-        "max": 5.0,
-        "description": "Q10 for Kv channels",
-        "tooltip": "Temperature coefficient for potassium channels",
-    },
     # Validation and research presets
     "cell_type_preset": {
         "type": "combo",
@@ -431,26 +407,5 @@ MULTICOMPARTMENT_CONFIG = {
         ],
         "description": "Cell type preset",
         "tooltip": "Use research-validated parameters for specific cell types",
-    },
-    "brain_region": {
-        "type": "combo",
-        "default": "cortex",
-        "options": ["cortex", "hippocampus", "cerebellum", "thalamus", "brainstem"],
-        "description": "Brain region",
-        "tooltip": "Optimize parameters for specific brain region",
-    },
-    "species": {
-        "type": "combo",
-        "default": "rat",
-        "options": ["rat", "mouse", "human", "cat", "monkey"],
-        "description": "Species",
-        "tooltip": "Species-specific parameter scaling",
-    },
-    "developmental_stage": {
-        "type": "combo",
-        "default": "adult",
-        "options": ["embryonic", "neonatal", "juvenile", "adult", "aged"],
-        "description": "Developmental stage",
-        "tooltip": "Age-appropriate morphological and electrical parameters",
     },
 }

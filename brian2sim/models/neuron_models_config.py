@@ -33,6 +33,15 @@ NEURON_MODELS_CONFIG = {
                 "max": 200.0,
                 "step": 1.0,
             },
+            "refractory": {
+                "type": float,
+                "label": "Refractory (ms):",
+                "tooltip": "Absolute refractory period per spike.\nTypical: 2-5 ms",
+                "default": 2.0,
+                "min": 0.0,
+                "max": 10.0,
+                "step": 0.1,
+            },
         },
         "presets": {
             "none": {"display_name": PRESET_DEFAULT_TEXT, "values": {}},
@@ -770,6 +779,15 @@ NEURON_MODELS_CONFIG = {
                 "min": 100.0,
                 "max": 100000.0,
                 "step": 100.0,
+            },
+            "refractory": {
+                "type": float,
+                "label": "Refractory (ms):",
+                "tooltip": "Absolute refractory period.\nTypical: 2-3 ms",
+                "default": 3.0,
+                "min": 0.0,
+                "max": 10.0,
+                "step": 0.1,
             },
         },
         "presets": {

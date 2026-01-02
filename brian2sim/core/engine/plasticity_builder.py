@@ -60,8 +60,8 @@ class PlasticityBuilder:
 
     def _setup_activity_detection(self, homeo_params, neurons):
         """Setup activity detection for homeostatic regulation."""
-        tau_activity = homeo_params.get("tau_activity", 1000.0) * b2.ms
-        target_rate = homeo_params.get("target_rate", 5.0) * b2.Hz
+        tau_activity = homeo_params.get("tau_activity", homeo_params.get("target_window", 1000.0)) * b2.ms
+        target_rate = homeo_params.get("target_rate", homeo_params.get("target_firing_rate", 5.0)) * b2.Hz
 
         # Add activity tracking
         neurons.run_regularly(
@@ -78,9 +78,9 @@ class PlasticityBuilder:
     def _setup_synaptic_scaling(self, homeo_params, neurons, synapses):
         """Setup synaptic scaling homeostatic mechanism."""
         scaling_rate = homeo_params.get("scaling_rate", 0.001)
-        min_weight = homeo_params.get("min_weight", 0.0) * b2.nS
-        max_weight = homeo_params.get("max_weight", 10.0) * b2.nS
-        homeo_params.get("target_rate", 5.0) * b2.Hz
+        min_weight = homeo_params.get("min_weight", homeo_params.get("min_weight_scaling", 0.1) * 10.0) * b2.nS
+        max_weight = homeo_params.get("max_weight", homeo_params.get("max_weight_scaling", 5.0) * 10.0) * b2.nS
+        target_rate = homeo_params.get("target_rate", homeo_params.get("target_firing_rate", 5.0)) * b2.Hz
 
         # Multiplicative scaling
         synapses.run_regularly(
@@ -129,29 +129,33 @@ class PlasticityBuilder:
 
     def _setup_bcm_plasticity(self, homeo_params, neurons, synapses):
         """Setup BCM-like plasticity with sliding threshold."""
-        tau_theta = homeo_params.get("tau_theta", 10000.0) * b2.ms
+        tau_theta = homeo_params.get("tau_theta", homeo_params.get("bcm_tau", 10000.0)) * b2.ms
         theta_init = homeo_params.get("theta_init", 1.0)
         eta = homeo_params.get("bcm_learning_rate", 0.01)
 
         # Add sliding threshold variable
         try:
+            p_bcm = homeo_params.get("bcm_power", 2.0)
             synapses.namespace["theta"] = theta_init
             synapses.namespace["tau_theta"] = tau_theta
             synapses.namespace["eta_bcm"] = eta
+            synapses.namespace["p_bcm"] = p_bcm
 
             # BCM rule: dw/dt = eta * post * (post - theta) * pre
+            # Theta tracks activity^p
+            # Note: We work in dimensionless units for theta to avoid complex unit powers in Brian2
             synapses.run_regularly(
                 """
-                theta = theta + dt/tau_theta * (activity_post**2 / Hz**2 - theta)
+                theta = theta + dt/tau_theta * ((activity_post/Hz)**p_bcm - theta)
                 dw = eta_bcm * activity_post/Hz * (activity_post/Hz - theta) * activity_pre/Hz * nS
-                w = clip(w + dw, 0*nS, 10*nS)
+                w = clip(w + dw, w_min, w_max)
                 """,
-                dt=100 * b2.ms,
+                dt=homeo_params.get("bcm_dt", 100.0) * b2.ms,
             )
         except Exception as e:
             print(f"Note: BCM plasticity setup error: {e}")
 
-        return {"tau_theta": tau_theta, "theta_init": theta_init, "eta": eta}
+        return {"tau_theta": tau_theta, "theta_init": theta_init, "eta": eta, "p_bcm": p_bcm}
 
     def _setup_network_regulation(self, homeo_params, neurons, synapses):
         """Setup network-level homeostatic regulation."""
@@ -166,7 +170,7 @@ class PlasticityBuilder:
                 inhibition_scale = 1 + {regulation_rate} * (network_activity - {target_activity})
                 w = w * int(w > 0*nS) + w * inhibition_scale * int(w < 0*nS)
                 """,
-                dt=500 * b2.ms,
+                dt=homeo_params.get("regulation_dt", 500.0) * b2.ms,
             )
         except Exception as e:
             print(f"Note: Network regulation setup error: {e}")
@@ -176,12 +180,19 @@ class PlasticityBuilder:
     def _setup_metaplasticity(self, homeo_params, neurons, synapses):
         """Setup metaplasticity - activity-dependent changes in plasticity rules."""
         tau_meta = homeo_params.get("tau_metaplasticity", 50000.0) * b2.ms
-        meta_threshold = homeo_params.get("meta_threshold", 5.0)  # Hz
+        meta_threshold = homeo_params.get("meta_threshold", homeo_params.get("metaplasticity_threshold", 5.0)) * b2.Hz
 
         try:
             # Sliding modification threshold for STDP
             synapses.namespace["tau_meta"] = tau_meta
             synapses.namespace["meta_threshold"] = meta_threshold
+            
+            # Scales for LTP/LTD adjustments
+            ltp_scale = homeo_params.get("meta_ltp_scaling", 0.001)
+            ltd_scale = homeo_params.get("meta_ltd_scaling", 0.001)
+            
+            synapses.namespace["ltp_scale"] = ltp_scale
+            synapses.namespace["ltd_scale"] = ltd_scale
 
             synapses.run_regularly(
                 """
@@ -190,13 +201,16 @@ class PlasticityBuilder:
                
                 # High activity -> increase LTD, decrease LTP
                 # Low activity -> decrease LTD, increase LTP
-                meta_factor = (avg_activity - meta_threshold) / meta_threshold
+                meta_factor = (avg_activity - meta_threshold/Hz) / (meta_threshold/Hz)
                
                 # Apply to STDP parameters if they exist
-                A_plus = A_plus * (1 - 0.001 * meta_factor)
-                A_minus = A_minus * (1 + 0.001 * meta_factor)
+                # Simple logic: modify A_plus / A_minus (requires them to be variables, not consts!)
+                # If they are consts in namespace, this checks fails.
+                # Assuming dynamic modification:
+                A_plus = A_plus * (1 - ltp_scale * meta_factor)
+                A_minus = A_minus * (1 + ltd_scale * meta_factor)
                 """,
-                dt=1000 * b2.ms,
+                dt=homeo_params.get("metaplasticity_dt", 1000.0) * b2.ms,
             )
         except Exception as e:
             print(f"Note: Metaplasticity requires STDP variables: {e}")
@@ -210,18 +224,18 @@ class PlasticityBuilder:
 
         systems = {}
 
-        if neuromod_params.get("dopamine_enabled", False):
+        if neuromod_params.get("dopamine_enabled", neuromod_params.get("dopamine_system", False)):
             systems["dopamine"] = self._setup_dopamine_system(neuromod_params, neurons, synapses)
 
-        if neuromod_params.get("acetylcholine_enabled", False):
+        if neuromod_params.get("acetylcholine_enabled", neuromod_params.get("acetylcholine_system", False)):
             systems["acetylcholine"] = self._setup_acetylcholine_system(
                 neuromod_params, neurons, synapses
             )
 
-        if neuromod_params.get("serotonin_enabled", False):
+        if neuromod_params.get("serotonin_enabled", neuromod_params.get("serotonin_system", False)):
             systems["serotonin"] = self._setup_serotonin_system(neuromod_params, neurons, synapses)
 
-        if neuromod_params.get("noradrenaline_enabled", False):
+        if neuromod_params.get("noradrenaline_enabled", neuromod_params.get("noradrenaline_system", False)):
             systems["noradrenaline"] = self._setup_noradrenaline_system(
                 neuromod_params, neurons, synapses
             )
@@ -240,26 +254,35 @@ class PlasticityBuilder:
     def _setup_dopamine_system(self, neuromod_params, neurons, synapses):
         """Setup dopaminergic neuromodulation system."""
         baseline = neuromod_params.get("dopamine_baseline", 0.5)
-        tau_da = neuromod_params.get("dopamine_tau", 200.0) * b2.ms
+        tau_da = neuromod_params.get("dopamine_tau", neuromod_params.get("dopamine_clearance_tau", 200.0)) * b2.ms
 
         try:
             # Add dopamine dynamics
             neurons.namespace["DA_baseline"] = baseline
             neurons.namespace["tau_DA"] = tau_da
 
+            # Add specific receptor effects to namespace
+            neurons.namespace["DA_D1"] = neuromod_params.get("dopamine_d1_effect", 0.2)
+            neurons.namespace["DA_D2"] = neuromod_params.get("dopamine_d2_effect", -0.15)
+            
             neurons.run_regularly(
                 """
                 DA = DA + dt * (DA_baseline - DA) / tau_DA
-                DA_modulation = 1 + 0.5 * (DA - DA_baseline)
+                # Net modulation combines D1 (typically excitatory) and D2 (inhibitory) coefficients
+                DA_modulation = 1 + (DA - DA_baseline) * (DA_D1 + DA_D2)
                 """,
                 dt=1 * b2.ms,
             )
 
             # Dopamine modulates synaptic plasticity
             if synapses:
+                synapses.namespace["DA_D1"] = neuromod_params.get("dopamine_d1_effect", 0.2)
+                synapses.namespace["DA_D2"] = neuromod_params.get("dopamine_d2_effect", -0.15)
                 synapses.run_regularly(
                     """
-                    w = w * (1 + 0.001 * (DA_post - 0.5))
+                    # Modulation of synaptic weight based on net receptor activation
+                    w_mod = (DA_post - 0.5) * (DA_D1 + DA_D2)
+                    w = w * (1 + 0.01 * w_mod)
                     """,
                     dt=100 * b2.ms,
                 )
@@ -271,19 +294,24 @@ class PlasticityBuilder:
     def _setup_acetylcholine_system(self, neuromod_params, neurons, synapses):
         """Setup cholinergic neuromodulation system."""
         baseline = neuromod_params.get("acetylcholine_baseline", 0.5)
-        tau_ach = neuromod_params.get("acetylcholine_tau", 100.0) * b2.ms
+        tau_ach = neuromod_params.get("acetylcholine_tau", neuromod_params.get("acetylcholine_clearance_tau", 100.0)) * b2.ms
 
         try:
             neurons.namespace["ACh_baseline"] = baseline
             neurons.namespace["tau_ACh"] = tau_ach
 
             # ACh modulates excitability
+            neurons.namespace["ACh_Muscarinic"] = neuromod_params.get("muscarinic_effect", 0.15)
+            neurons.namespace["ACh_Nicotinic"] = neuromod_params.get("nicotinic_effect", 0.3)
+
+            # ACh modulates excitability
             neurons.run_regularly(
                 """
                 ACh = ACh + dt * (ACh_baseline - ACh) / tau_ACh
-                v_threshold = v_threshold - 0.5*mV * (ACh - ACh_baseline)
+                # Muscarinic effect modulates threshold (excitability)
+                v_th = v_th - (ACh - ACh_baseline) * ACh_Muscarinic * 20*mV # 20*mV is max shift at effect=1.0
                 """,
-                dt=1 * b2.ms,
+                dt=neuromod_params.get("update_dt", 1.0) * b2.ms,
             )
         except Exception as e:
             print(f"Note: Acetylcholine setup error: {e}")
@@ -293,17 +321,22 @@ class PlasticityBuilder:
     def _setup_serotonin_system(self, neuromod_params, neurons, synapses):
         """Setup serotonergic neuromodulation system."""
         baseline = neuromod_params.get("serotonin_baseline", 0.5)
-        tau_5ht = neuromod_params.get("serotonin_tau", 500.0) * b2.ms
+        tau_5ht = neuromod_params.get("serotonin_tau", neuromod_params.get("serotonin_clearance_tau", 500.0)) * b2.ms
 
         try:
             neurons.namespace["HT5_baseline"] = baseline
             neurons.namespace["tau_5HT"] = tau_5ht
 
             # 5-HT modulates inhibition and membrane time constant
+            neurons.namespace["HT5_1A"] = neuromod_params.get("5ht1a_effect", -0.1)
+            neurons.namespace["HT5_2A"] = neuromod_params.get("5ht2a_effect", 0.15)
+
+            # 5-HT modulates inhibition and membrane time constant
             neurons.run_regularly(
                 """
                 HT5 = HT5 + dt * (HT5_baseline - HT5) / tau_5HT
-                tau = tau * (1 + 0.1 * (HT5 - HT5_baseline))
+                # Net effect on time constant
+                tau = tau * (1 + (HT5 - HT5_baseline) * (HT5_1A + HT5_2A))
                 """,
                 dt=1 * b2.ms,
             )
@@ -315,17 +348,23 @@ class PlasticityBuilder:
     def _setup_noradrenaline_system(self, neuromod_params, neurons, synapses):
         """Setup noradrenergic neuromodulation system."""
         baseline = neuromod_params.get("noradrenaline_baseline", 0.5)
-        tau_ne = neuromod_params.get("noradrenaline_tau", 300.0) * b2.ms
+        tau_ne = neuromod_params.get("noradrenaline_tau", neuromod_params.get("noradrenaline_clearance_tau", 300.0)) * b2.ms
 
         try:
             neurons.namespace["NE_baseline"] = baseline
             neurons.namespace["tau_NE"] = tau_ne
 
             # NE modulates gain and signal-to-noise ratio
+            neurons.namespace["NE_Alpha1"] = neuromod_params.get("alpha1_effect", 0.2)
+            neurons.namespace["NE_Alpha2"] = neuromod_params.get("alpha2_effect", -0.1)
+            neurons.namespace["NE_Beta"] = neuromod_params.get("beta_effect", 0.15)
+
+            # NE modulates gain and signal-to-noise ratio
             neurons.run_regularly(
                 """
                 NE = NE + dt * (NE_baseline - NE) / tau_NE
-                gain_factor = 1 + 0.3 * (NE - NE_baseline)
+                # Combined adrenergic effect on gain
+                gain_factor = 1 + (NE - NE_baseline) * (NE_Alpha1 + NE_Alpha2 + NE_Beta)
                 """,
                 dt=1 * b2.ms,
             )
@@ -336,7 +375,15 @@ class PlasticityBuilder:
 
     def _setup_neuromodulator_release(self, neuromod_params, systems, neurons):
         """Setup neuromodulator release patterns."""
-        release_pattern = neuromod_params.get("release_pattern", "tonic")
+        # Map release_triggers config to internal pattern logic
+        release_pattern = neuromod_params.get("release_triggers", "manual")
+        # 'manual' maps to tonic/steady state in this context unless triggered manually
+        if release_pattern == "manual": 
+             release_pattern = "tonic"
+        elif release_pattern == "temporal_pattern":
+             release_pattern = "oscillatory"
+        elif release_pattern == "activity_dependent":
+             release_pattern = "phasic"
 
         if release_pattern == "tonic":
             # Steady-state release (default behavior)
@@ -346,8 +393,15 @@ class PlasticityBuilder:
             # Event-triggered release bursts
             for nm_name, nm_system in systems.items():
                 try:
-                    burst_amplitude = neuromod_params.get(f"{nm_name}_burst_amplitude", 0.3)
-                    neuromod_params.get(f"{nm_name}_burst_duration", 100.0) * b2.ms
+                    # Calculate burst amplitude from release rate and duration
+                    # burst = rate (uM/ms) * duration (ms)
+                    release_rate = neuromod_params.get(f"{nm_name}_release_rate", 0.01)
+                    duration = neuromod_params.get("release_duration", 100.0)
+                    burst_amplitude = release_rate * duration * 0.1 # Scaling factor for simulation stability
+                    
+                    # Alternatively check for explicit burst amplitude override
+                    if f"{nm_name}_burst_amplitude" in neuromod_params:
+                        burst_amplitude = neuromod_params[f"{nm_name}_burst_amplitude"]
 
                     # Triggered by high network activity
                     neurons.run_regularly(

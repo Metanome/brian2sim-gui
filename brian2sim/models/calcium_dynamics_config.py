@@ -61,17 +61,49 @@ CALCIUM_DYNAMICS_CONFIG = {
         "• High buffering: 200-1000",
         "depends_on": {"ca_buffer_enabled": True},
     },
-    "buffer_kinetics": {
-        "label": "Buffer Kinetics (ms):",
+    "buffer_mode": {
+        "label": "Buffering Model:",
+        "type": "combo",
+        "default": "instant",
+        "options": ["instant", "kinetic"],
+        "display_options": ["Instantaneous (Kappa)", "Kinetic (Mass Action)"],
+        "tooltip": "Type of calcium buffering:\n"
+        "• Instantaneous: Fast equilibrium approximation (computationally cheap)\n"
+        "• Kinetic: Explicit binding/unbinding equations (more accurate)",
+        "depends_on": {"ca_buffer_enabled": True},
+    },
+    "buffer_total": {
+        "label": "Total Buffer [B] (mM):",
+        "type": "double",
+        "default": 0.5,
+        "min": 0.01,
+        "max": 5.0,
+        "step": 0.01,
+        "decimals": 3,
+        "tooltip": "Total concentration of calcium buffer.",
+        "depends_on": {"buffer_mode": "kinetic"},
+    },
+    "buffer_k_on": {
+        "label": "Forward Rate k_on (1/mM/ms):",
+        "type": "double",
+        "default": 100.0,
+        "min": 1.0,
+        "max": 1000.0,
+        "step": 1.0,
+        "decimals": 1,
+        "tooltip": "Buffer binding rate constant.",
+        "depends_on": {"buffer_mode": "kinetic"},
+    },
+    "buffer_k_off": {
+        "label": "Backward Rate k_off (1/ms):",
         "type": "double",
         "default": 1.0,
-        "min": 0.1,
-        "max": 50.0,
-        "step": 0.1,
-        "decimals": 1,
-        "tooltip": "Time constant for calcium buffer binding/unbinding.\n"
-        "Fast buffers: 0.1-1ms, Slow buffers: 5-50ms",
-        "depends_on": {"ca_buffer_enabled": True},
+        "min": 0.01,
+        "max": 100.0,
+        "step": 0.01,
+        "decimals": 2,
+        "tooltip": "Buffer unbinding rate constant.",
+        "depends_on": {"buffer_mode": "kinetic"},
     },
     # Calcium Extrusion
     "ca_extrusion_rate": {
@@ -101,6 +133,19 @@ CALCIUM_DYNAMICS_CONFIG = {
         "Physiological range: 0.05-0.2 μM",
         "depends_on": {"enabled": True},
     },
+    "e_ca": {
+        "label": "Ca²⁺ Reversal Potential (mV):",
+        "type": "double",
+        "default": 120.0,
+        "min": 50.0,
+        "max": 150.0,
+        "step": 5.0,
+        "decimals": 1,
+        "tooltip": "Calcium reversal potential (Nernst potential for Ca²⁺).\n"
+        "Physiological range: 100-140 mV depending on extracellular [Ca²⁺].",
+        "depends_on": {"enabled": True},
+    },
+
     # Calcium-Dependent Plasticity
     "ca_plasticity_enabled": {
         "label": "Calcium-Dependent Plasticity",

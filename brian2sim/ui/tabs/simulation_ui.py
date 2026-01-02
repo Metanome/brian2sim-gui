@@ -40,14 +40,17 @@ except ImportError:
 
 # Handle optional numpy import
 try:
-    pass
-
+    import numpy as np
     NUMPY_AVAILABLE = True
 except ImportError:
     NUMPY_AVAILABLE = False
 
 
+from brian2sim.ui.tabs.monitors_ui import create_monitors_group
+
+
 def create_simulation_tab(main_window):
+
     """
     Creates the simulation tab with controls, progress tracking, and results visualization.
     """
@@ -68,6 +71,10 @@ def create_simulation_tab(main_window):
     # --- Simulation Controls Group ---
     controls_group = create_simulation_controls_group(main_window)
     controls_layout.addWidget(controls_group)
+    
+    # --- Monitors Group ---
+    monitors_group = create_monitors_group(main_window)
+    controls_layout.addWidget(monitors_group)
 
     # --- Progress Group ---
     progress_group = create_progress_group(main_window)

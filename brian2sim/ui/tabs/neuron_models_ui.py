@@ -65,7 +65,6 @@ def create_neuron_model_group(main_window):
     neuron_model_group_layout.addWidget(main_window.neuron_model_stacked_widget)
     neuron_model_group.setLayout(neuron_model_group_layout)
 
-    # Note: Signal connections are handled in neuron_models_manager.connect_signals()
-    # which is called after UI initialization
+
 
     return neuron_model_group

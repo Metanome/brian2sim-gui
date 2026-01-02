@@ -84,64 +84,28 @@ class MainWindow(QMainWindow):
         self.neuron_model_forms = {}
         self.neuron_model_preset_combo = None
 
-        # Simulation Parameters UI elements - will be created by sim_params_ui
-        self.sim_time_input = None
-        self.input_current_input = None
-        self.num_neurons_input = None
-        self.current_start_input = None
-        self.current_duration_input = None
-        self.lif_threshold_input = None
-        self.lif_reset_input = None
-        self.sim_params_layout = None  # Will be set by sim_params_ui
-        # For sim_params_ui to manage grid layout state
-        self.sim_params_current_row = 0
-        self.sim_params_current_col = 0
-        self.sim_params_num_cols = 3
+        # Simulation Parameters UI elements - managed by form generator
+        self.sim_params_layout = None
 
-        # Noise Options UI elements - will be created by noise_options_ui
-        self.noise_checkbox = None
-        self.noise_params_group = None
-        self.noise_intensity_input = None
-        self.noise_method_combo = None
-        self.noise_params_layout = None  # Will be set by noise_options_ui
-        # For noise_options_ui to manage grid layout state
-        self.noise_params_current_row = 0
-        self.noise_params_current_col = 0
-        self.noise_params_num_cols = 2
 
-        # Network Options UI elements - will be created by network_options_ui
+        # Noise Options UI elements - managed by form generator
+        self.noise_params_layout = None
+
+
+        # Network Options UI elements - managed by form generator
         self.synaptic_connections_checkbox = None
         self.synapse_params_group = None
-        self.synapse_params_layout = None  # QFormLayout
-        self.synaptic_weight_input = None
+        self.synapse_params_layout = None
         self.network_topology_combo = None
         self.topology_params_stacked_widget = None
-        # Topology-specific forms and their widgets
-        self.one_to_one_form = None
-        self.all_to_all_form = None
-        self.allow_self_connections_checkbox = None
-        self.random_form = None
-        self.connection_probability_input = None
-        self.small_world_form = None
-        self.sw_nearest_neighbors_input = None
-        self.sw_rewiring_probability_input = None
 
-        # Advanced Network Features UI elements - will be created by advanced_network_ui
+
+        # Advanced Network Features UI elements - managed by form generator
         self.dales_principle_checkbox = None
-        self.dales_principle_params_group = None
-        self.dales_principle_forms = {}
         self.synaptic_delays_checkbox = None
-        self.synaptic_delays_params_group = None
-        self.synaptic_delays_forms = {}
         self.stdp_checkbox = None
-        self.stdp_params_group = None
-        self.stdp_forms = {}
-        self.stdp_preset_combo = None
         self.distance_connectivity_checkbox = None
-        self.distance_connectivity_params_group = None
-        self.distance_connectivity_forms = {}
-        self.distance_connectivity_preset_combo = None
-        self.advanced_network_preset_combo = None
+
 
         # Simulation UI elements - will be created by simulation_ui
         self.run_simulation_button = None
@@ -239,7 +203,7 @@ class MainWindow(QMainWindow):
             # Validate parameters - returns True if valid
             is_valid = self.validation_manager.validate_current_parameters()
             if not is_valid and self.validation_manager.current_errors:
-                # Check if there are actual errors (not just warnings)
+                # Check for errors (excluding warnings)
                 has_errors = any(
                     e.severity == "error" for e in self.validation_manager.current_errors
                 )
@@ -461,6 +425,12 @@ class MainWindow(QMainWindow):
                         config_data.get("short_term_plasticity", {})
                     )
 
+                # 8. Load monitors
+                if hasattr(self, "monitors_manager"):
+                    self.monitors_manager.load_params_from_config(
+                        config_data.get("monitors", {})
+                    )
+
     def save_configuration(self):
         """Save current configuration to a JSON file."""
         file_path, _ = QFileDialog.getSaveFileName(
@@ -490,10 +460,11 @@ class MainWindow(QMainWindow):
                 config_data["neuromodulation"] = self.neuromodulation_ui.get_params_for_save()
             if hasattr(self, "multicompartment_ui"):
                 config_data["multicompartment"] = self.multicompartment_ui.get_params_for_save()
-            if hasattr(self, "short_term_plasticity_ui"):
                 config_data["short_term_plasticity"] = (
                     self.short_term_plasticity_ui.get_params_for_save()
                 )
+            if hasattr(self, "monitors_manager"):
+                config_data["monitors"] = self.monitors_manager.get_params_for_save()
 
             self.config_manager.save_config(config_data, file_path)
 
