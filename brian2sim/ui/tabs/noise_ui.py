@@ -1,27 +1,32 @@
 from PyQt6.QtWidgets import (
     QGroupBox,
+    QVBoxLayout,
 )
 
 from brian2sim.models.noise_config import NOISE_CONFIG
-from brian2sim.ui.ui_forms import NoiseOptionsFormGenerator
+from brian2sim.ui.ui_forms import NoiseFormGenerator
 
 
-def create_noise_options_group(main_window):
+def create_noise_group(main_window):
     """
-    Creates the 'Noise Options' group box using config-driven approach.
+    Creates the 'Noise' group box using config-driven approach.
     """
-    noise_options_group = QGroupBox("Noise Options")
-    noise_options_group.setToolTip(
+    noise_group = QGroupBox("Noise")
+    noise_group.setToolTip(
         "Configure biologically realistic noise to simulate background synaptic activity and channel fluctuations."
     )
 
     # Create form generator
-    main_window.noise_form_generator = NoiseOptionsFormGenerator(NOISE_CONFIG)
+    main_window.noise_form_generator = NoiseFormGenerator(NOISE_CONFIG)
 
-    # Get the form widget and set it as the layout
+    # Get the form widget and add it to the group box layout
     form_widget = main_window.noise_form_generator.get_form_widget()
     if form_widget:
-        noise_options_group.setLayout(form_widget.layout())
+        # Create a layout for the group box and add the form widget to it
+        # This preserves the parent-child hierarchy so visibility toggling works
+        group_layout = QVBoxLayout(noise_group)
+        group_layout.setContentsMargins(5, 5, 5, 5)
+        group_layout.addWidget(form_widget)
 
         # Store references to specific widgets for backward compatibility
         param_widgets = main_window.noise_form_generator.get_param_widgets()
@@ -40,13 +45,13 @@ def create_noise_options_group(main_window):
                         main_window.noise_manager.on_param_changed
                     )
 
-    return noise_options_group
+    return noise_group
 
 
 def toggle_noise_params_visibility(main_window, state):
     """Toggle visibility of noise parameter widgets based on checkbox state"""
-    # The NoiseOptionsFormGenerator now handles parameter visibility automatically
-    # through its simplified lambda connection, similar to NetworkOptionsFormGenerator.
+    # The NoiseFormGenerator now handles parameter visibility automatically
+    # through its simplified lambda connection, similar to NetworkFormGenerator.
     # No additional action needed here since the lambda directly controls the
     # params_group_widget visibility and the dependency system handles the rest.
 

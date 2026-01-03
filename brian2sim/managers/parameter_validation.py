@@ -291,7 +291,7 @@ class ValidationManager(QObject):
             "noise_manager": "get_config",
             "input_patterns_manager": "get_input_patterns_config",
             "network_manager": "get_config",
-            "advanced_network_manager": "get_advanced_network_options",
+            "advanced_network_manager": "get_config",
             "gap_junctions_manager": "get_parameters",
             "synaptic_receptors_manager": "get_synaptic_receptors_config",
             "calcium_dynamics_manager": "get_parameters",

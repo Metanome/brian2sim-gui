@@ -66,8 +66,8 @@ class TestSimulationLifecycle:
         mock_window = Mock()
         mock_window.neuron_models_manager = Mock()
         mock_window.sim_params_manager = Mock()
-        mock_window.noise_options_manager = Mock()
-        mock_window.network_options_manager = Mock()
+        mock_window.noise_manager = Mock()
+        mock_window.network_manager = Mock()
         
         # Configure mocks to return valid data
         mock_window.neuron_models_manager.get_neuron_model_config.return_value = {
@@ -76,8 +76,8 @@ class TestSimulationLifecycle:
         mock_window.sim_params_manager.get_sim_params_config.return_value = {
             "num_neurons": 10, "sim_time": 100, "dt": 0.1
         }
-        mock_window.noise_options_manager.get_noise_options_config.return_value = {"enabled": False}
-        mock_window.network_options_manager.get_network_options_config.return_value = {"enabled": False}
+        mock_window.noise_manager.get_config.return_value = {"enabled": False}
+        mock_window.network_manager.get_config.return_value = {"enabled": False}
         
         manager = SimulationManager(mock_window)
         
@@ -143,8 +143,8 @@ class TestProgressTracking:
         mock_window = Mock()
         mock_window.neuron_models_manager = Mock()
         mock_window.sim_params_manager = Mock()
-        mock_window.noise_options_manager = Mock()
-        mock_window.network_options_manager = Mock()
+        mock_window.noise_manager = Mock()
+        mock_window.network_manager = Mock()
         
         # Configure mocks
         mock_window.neuron_models_manager.get_neuron_model_config.return_value = {
@@ -153,8 +153,8 @@ class TestProgressTracking:
         mock_window.sim_params_manager.get_sim_params_config.return_value = {
             "num_neurons": 10, "sim_time": 100, "dt": 0.1
         }
-        mock_window.noise_options_manager.get_noise_options_config.return_value = {"enabled": False}
-        mock_window.network_options_manager.get_network_options_config.return_value = {"enabled": False}
+        mock_window.noise_manager.get_config.return_value = {"enabled": False}
+        mock_window.network_manager.get_config.return_value = {"enabled": False}
         
         manager = SimulationManager(mock_window)
         manager.progress_timer = Mock()
@@ -295,8 +295,8 @@ class TestCodeGeneration:
         mock_window = Mock()
         mock_window.neuron_models_manager = Mock()
         mock_window.sim_params_manager = Mock()
-        mock_window.noise_options_manager = Mock()
-        mock_window.network_options_manager = Mock()
+        mock_window.noise_manager = Mock()
+        mock_window.network_manager = Mock()
         
         # Configure mocks
         mock_window.neuron_models_manager.get_neuron_model_config.return_value = {
@@ -305,8 +305,8 @@ class TestCodeGeneration:
         mock_window.sim_params_manager.get_sim_params_config.return_value = {
             "num_neurons": 10, "sim_time": 100, "dt": 0.1
         }
-        mock_window.noise_options_manager.get_noise_options_config.return_value = {"enabled": False}
-        mock_window.network_options_manager.get_network_options_config.return_value = {"enabled": False}
+        mock_window.noise_manager.get_config.return_value = {"enabled": False}
+        mock_window.network_manager.get_config.return_value = {"enabled": False}
         
         manager = SimulationManager(mock_window)
         

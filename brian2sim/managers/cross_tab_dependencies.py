@@ -45,7 +45,7 @@ class CrossTabDependencyManager(QObject):
             "gap_junction_sync_coupling": {
                 "source_tab": "gap_junctions",
                 "source_param": "enabled",
-                "target_tab": "network_options",
+                "target_tab": "network",
                 "target_params": ["synchrony_analysis", "electrical_coupling_strength"],
                 "rule": "enable_electrical_coupling_analysis",
             },

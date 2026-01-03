@@ -10,11 +10,13 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QLabel, QVBoxLayout
 
 # Handle optional matplotlib imports
+# Handle optional matplotlib imports
 try:
     import matplotlib
-    matplotlib.use('Agg')  # Use non-interactive backend
+    matplotlib.use('QtAgg')  # Use interactive backend
     import matplotlib.pyplot as plt
     from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
+    from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
     from matplotlib.figure import Figure
     MATPLOTLIB_AVAILABLE = True
 except ImportError:
@@ -63,6 +65,11 @@ class ResultsManager:
                          
                     if info.get("type") == "trace":
                         self._update_generic_trace_plot(key, info)
+
+            # Update analysis plots
+            self._update_psth_plot(results_data)
+            self._update_fft_plot(results_data)
+            self._update_isi_plot(results_data)
                         
         except Exception as e:
             print(f"Error updating plots: {e}")
@@ -83,11 +90,17 @@ class ResultsManager:
         self.current_results = None
 
         # Clear plots
-        if hasattr(self.main_window, "raster_plot_widget"):
-            self._clear_plot_widget(self.main_window.raster_plot_widget)
-
-        if hasattr(self.main_window, "voltage_plot_widget"):
-            self._clear_plot_widget(self.main_window.voltage_plot_widget)
+        widgets = [
+            "raster_plot_widget",
+            "voltage_plot_widget",
+            "psth_plot_widget",
+            "fft_plot_widget",
+            "isi_plot_widget",
+        ]
+        
+        for widget_name in widgets:
+            if hasattr(self.main_window, widget_name):
+                self._clear_plot_widget(getattr(self.main_window, widget_name))
 
         # Clear statistics
         if hasattr(self.main_window, "statistics_widget"):
@@ -102,25 +115,23 @@ class ResultsManager:
 
         exported_files = []
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        plot_map = {
+            "raster_plot_widget": "spike_raster",
+            "voltage_plot_widget": "voltage_traces",
+            "psth_plot_widget": "psth_plot",
+            "fft_plot_widget": "fft_plot",
+            "isi_plot_widget": "isi_histogram"
+        }
 
         try:
-            # Export raster plot
-            if hasattr(self.main_window, "raster_plot_widget"):
-                raster_file = os.path.join(directory, f"spike_raster_{timestamp}.png")
-                if self.main_window.raster_plot_widget.figure:
-                    self.main_window.raster_plot_widget.figure.savefig(
-                        raster_file, dpi=300, bbox_inches="tight"
-                    )
-                    exported_files.append(raster_file)
-
-            # Export voltage plot
-            if hasattr(self.main_window, "voltage_plot_widget"):
-                voltage_file = os.path.join(directory, f"voltage_traces_{timestamp}.png")
-                if self.main_window.voltage_plot_widget.figure:
-                    self.main_window.voltage_plot_widget.figure.savefig(
-                        voltage_file, dpi=300, bbox_inches="tight"
-                    )
-                    exported_files.append(voltage_file)
+            for widget_name, file_prefix in plot_map.items():
+                if hasattr(self.main_window, widget_name):
+                    widget = getattr(self.main_window, widget_name)
+                    if widget.figure:
+                        filename = os.path.join(directory, f"{file_prefix}_{timestamp}.png")
+                        widget.figure.savefig(filename, dpi=300, bbox_inches="tight")
+                        exported_files.append(filename)
 
         except Exception as e:
             print(f"Error exporting plots: {e}")
@@ -263,6 +274,165 @@ class ResultsManager:
         widget.figure.tight_layout()
         widget.canvas.draw()
 
+    def _update_psth_plot(self, results_data):
+        """Update the Population Statistics (PSTH) plot."""
+        if not hasattr(self.main_window, "psth_plot_widget") or not NUMPY_AVAILABLE:
+            return
+            
+        widget = self.main_window.psth_plot_widget
+        if not widget.figure: return
+        widget.figure.clear()
+        ax = widget.figure.add_subplot(111)
+        
+        raw = results_data.get("raw_data", {})
+        spikes = raw.get("spike_monitor", {})
+        spike_times = spikes.get("t")
+        
+        if spike_times is None or len(spike_times) == 0:
+            self._show_no_data(ax, "No spikes for PSTH")
+        else:
+            sim_params = results_data.get("parameters", {}).get("simulation", {})
+            sim_time = sim_params.get("sim_time", 100)
+            num_neurons = sim_params.get("num_neurons", 1)
+            
+            # Binning (e.g., 5ms bins)
+            bin_width = 5.0 # ms
+            bins = np.arange(0, sim_time + bin_width, bin_width)
+            hist, _ = np.histogram(spike_times, bins=bins)
+            
+            # Convert to Rate (Hz/neuron)
+            # rate = count / (bin_width_s * num_neurons)
+            rate = hist / ((bin_width / 1000.0) * num_neurons)
+            centers = (bins[:-1] + bins[1:]) / 2
+            
+            ax.plot(centers, rate, color='black', linewidth=1.5)
+            ax.set_xlabel("Time (ms)")
+            ax.set_ylabel("Population Rate (Hz)")
+            ax.set_title(f"Population Rate (bin={bin_width}ms)")
+            ax.grid(True, alpha=0.3)
+            
+        widget.figure.tight_layout()
+        widget.canvas.draw()
+        
+    def _update_fft_plot(self, results_data):
+        """Update the Power Spectrum (FFT) plot."""
+        if not hasattr(self.main_window, "fft_plot_widget") or not NUMPY_AVAILABLE:
+            return
+            
+        widget = self.main_window.fft_plot_widget
+        if not widget.figure: return
+        widget.figure.clear()
+        ax = widget.figure.add_subplot(111)
+        
+        raw = results_data.get("raw_data", {})
+        spikes = raw.get("spike_monitor", {})
+        spike_times = spikes.get("t")
+        
+        if spike_times is None or len(spike_times) < 10:
+             self._show_no_data(ax, "Insufficient data for FFT")
+        else:
+            sim_params = results_data.get("parameters", {}).get("simulation", {})
+            sim_time = sim_params.get("sim_time", 100)
+            
+            # Use finer bins for FFT (e.g. 1ms) to capture higher freqs
+            bin_width = 1.0 # ms
+            fs = 1000.0 / bin_width # Sample rate (Hz)
+            
+            bins = np.arange(0, sim_time + bin_width, bin_width)
+            hist, _ = np.histogram(spike_times, bins=bins)
+            
+            # FFT
+            n = len(hist)
+            fft_vals = np.fft.rfft(hist - np.mean(hist)) # Remove DC component
+            power = np.abs(fft_vals)**2
+            freqs = np.fft.rfftfreq(n, d=1/fs)
+            
+            # Smooth curve (optional)
+            try:
+                from scipy.ndimage import gaussian_filter1d
+                power = gaussian_filter1d(power, sigma=2.0)
+            except ImportError:
+                # Scipy not available, skip smoothing
+                pass
+            
+            # Plot 0-100Hz (Brain rhythms range)
+            mask = (freqs > 1) & (freqs < 100)
+            ax.plot(freqs[mask], power[mask], color='purple')
+            ax.set_xlabel("Frequency (Hz)")
+            ax.set_ylabel("Power")
+            ax.set_title("Population Power Spectrum")
+            ax.grid(True, alpha=0.3)
+            
+        widget.figure.tight_layout()
+        widget.canvas.draw()
+        
+    def _update_isi_plot(self, results_data):
+        """Update Inter-Spike Interval Histogram."""
+        if not hasattr(self.main_window, "isi_plot_widget") or not NUMPY_AVAILABLE:
+            return
+            
+        widget = self.main_window.isi_plot_widget
+        if not widget.figure: return
+        widget.figure.clear()
+        ax = widget.figure.add_subplot(111)
+        
+        raw = results_data.get("raw_data", {})
+        spikes = raw.get("spike_monitor", {})
+        spike_times = spikes.get("t")
+        spike_indices = spikes.get("i")
+        
+        if spike_times is None or len(spike_times) < 50:
+            self._show_no_data(ax, "Insufficient spikes for ISI")
+        else:
+            # Calculate ISIs per neuron
+            isis = []
+            
+            # This can be slow for many spikes/neurons
+            # Optimization: Sort by index AND time to ensure correct ISIs
+            # lexsort sorts by the last key first (primary), so we pass (spike_times, spike_indices)
+            sort_idx = np.lexsort((spike_times, spike_indices))
+            sorted_times = spike_times[sort_idx]
+            sorted_indices = spike_indices[sort_idx]
+            
+            # Find split points
+            _, start_indices = np.unique(sorted_indices, return_index=True)
+            
+            # Vectorized approach or loop over neurons?
+            # Creating split arrays
+            neuron_spike_groups = np.split(sorted_times, start_indices[1:])
+            
+            for group in neuron_spike_groups:
+                if len(group) > 1:
+                    # Differences between consecutive spikes
+                    diffs = np.diff(group)
+                    isis.extend(diffs)
+            
+            isis = np.array(isis)
+            
+            if len(isis) > 0:
+                # Plot Histogram (Log scale often better, but linear standard first)
+                # Cap at 200ms for visibility of bursting/regularity
+                ax.hist(isis, bins=50, range=(0, 200), color='green', alpha=0.7)
+                ax.set_xlabel("Inter-Spike Interval (ms)")
+                ax.set_ylabel("Count")
+                ax.set_title("ISI Distribution")
+                ax.grid(True, alpha=0.3)
+                
+                # Add stats
+                cv = np.std(isis) / np.mean(isis) if np.mean(isis) > 0 else 0
+                ax.text(0.7, 0.8, f"CV: {cv:.2f}", transform=ax.transAxes, 
+                        bbox=dict(facecolor='white', alpha=0.8))
+            else:
+                 self._show_no_data(ax, "No repeated spikes found")
+            
+        widget.figure.tight_layout()
+        widget.canvas.draw()
+
+    def _show_no_data(self, ax, message):
+        ax.text(0.5, 0.5, message, ha="center", va="center", transform=ax.transAxes, color="gray")
+        ax.set_xticks([])
+        ax.set_yticks([])
+
     def _update_generic_trace_plot(self, key, info):
         """Update or create a generic trace plot for custom variables."""
         # Clean key for display (e.g. state_monitor_g_Ca -> g_Ca)
@@ -358,8 +528,10 @@ class ResultsManager:
 
         if len(spike_times) > 0 and sim_params.get("sim_time"):
             sim_duration_s = sim_params["sim_time"] / 1000.0  # Convert ms to seconds
+            num_neurons = int(sim_params.get("num_neurons", 1))
             total_firing_rate = len(spike_times) / sim_duration_s
-            stats_lines.append(f"Overall Firing Rate: {total_firing_rate:.2f} Hz")
+            avg_firing_rate = total_firing_rate / max(1, num_neurons)
+            stats_lines.append(f"Overall Firing Rate: {avg_firing_rate:.2f} Hz")
 
         # Per-neuron statistics
         if len(spike_indices) > 0:

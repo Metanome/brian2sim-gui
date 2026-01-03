@@ -392,113 +392,113 @@ class ConfigManager:
 
         return True, ""
 
-    def _validate_noise(self, noise_options):
+    def _validate_noise(self, noise_config):
         """Validates noise configuration parameters"""
-        if not isinstance(noise_options, dict):
-            return False, "Noise options must be a dictionary"
+        if not isinstance(noise_config, dict):
+            return False, "Noise config must be a dictionary"
 
         # Validate noise enabled flag
-        if "enabled" in noise_options:
-            if not isinstance(noise_options["enabled"], bool):
+        if "enabled" in noise_config:
+            if not isinstance(noise_config["enabled"], bool):
                 return False, "Noise 'enabled' must be a boolean value"
 
         # Validate noise intensity (always validate if present)
-        if "intensity" in noise_options:
-            intensity = noise_options["intensity"]
+        if "intensity" in noise_config:
+            intensity = noise_config["intensity"]
             if not isinstance(intensity, (int, float)):
                 return False, "Noise intensity must be a numeric value"
             if not (0.0 <= intensity <= 5.0):
                 return False, "Noise intensity must be between 0.0 and 5.0 nA"
 
         # Validate noise method (always validate if present)
-        if "method" in noise_options:
-            method = noise_options["method"]
+        if "method" in noise_config:
+            method = noise_config["method"]
             valid_methods = ["Gaussian White Noise", "Ornstein-Uhlenbeck Process"]
             if method not in valid_methods:
                 return False, f"Noise method must be one of: {', '.join(valid_methods)}"
 
         return True, ""
 
-    def _validate_network(self, network_options):
+    def _validate_network(self, network_config):
         """Validates network configuration parameters"""
-        if not isinstance(network_options, dict):
-            return False, "Network options must be a dictionary"
+        if not isinstance(network_config, dict):
+            return False, "Network config must be a dictionary"
 
         # Validate synaptic connections enabled flag
-        if "enabled" in network_options:
-            if not isinstance(network_options["enabled"], bool):
+        if "enabled" in network_config:
+            if not isinstance(network_config["enabled"], bool):
                 return False, "Network 'enabled' must be a boolean value"
 
         # Validate synaptic weight (always validate if present)
-        if "synaptic_weight" in network_options:
-            weight = network_options["synaptic_weight"]
+        if "synaptic_weight" in network_config:
+            weight = network_config["synaptic_weight"]
             if not isinstance(weight, (int, float)):
                 return False, "Synaptic weight must be a numeric value"
             if not (0.0 <= weight <= 100.0):
                 return False, "Synaptic weight must be between 0.0 and 100.0"
 
         # Validate network topology (always validate if present)
-        if "network_topology" in network_options:
-            topology = network_options["network_topology"]
+        if "network_topology" in network_config:
+            topology = network_config["network_topology"]
             valid_topologies = ["random", "small_world", "scale_free", "regular", "modular", "coba_benchmark"]
             if topology not in valid_topologies:
                 return False, f"Network topology must be one of: {', '.join(valid_topologies)}"
 
         # If network is enabled, validate topology-specific parameters
-        if network_options.get("enabled", False):
+        if network_config.get("enabled", False):
 
             # Validate topology-specific parameters
-            if "syn_prob" in network_options:
-                prob = network_options["syn_prob"]
+            if "syn_prob" in network_config:
+                prob = network_config["syn_prob"]
                 if not isinstance(prob, (int, float)):
                     return False, "Connection probability must be a numeric value"
                 if not (0.0 <= prob <= 1.0):
                     return False, "Connection probability must be between 0.0 and 1.0"
 
-            if "topology_k" in network_options:
-                neighbors = network_options["topology_k"]
+            if "topology_k" in network_config:
+                neighbors = network_config["topology_k"]
                 if not isinstance(neighbors, int):
                     return False, "Small-world nearest neighbors must be an integer"
                 if not (2 <= neighbors <= 20):
                     return False, "Small-world nearest neighbors must be between 2 and 20"
 
-            if "topology_p_rewire" in network_options:
-                rewiring_prob = network_options["topology_p_rewire"]
+            if "topology_p_rewire" in network_config:
+                rewiring_prob = network_config["topology_p_rewire"]
                 if not isinstance(rewiring_prob, (int, float)):
                     return False, "Small-world rewiring probability must be a numeric value"
                 if not (0.0 <= rewiring_prob <= 1.0):
                     return False, "Small-world rewiring probability must be between 0.0 and 1.0"
 
-            if "topology_m" in network_options:
-                m = network_options["topology_m"]
+            if "topology_m" in network_config:
+                m = network_config["topology_m"]
                 if not isinstance(m, int):
                     return False, "Scale-free m parameter must be an integer"
                 if not (1 <= m <= 10):
                     return False, "Scale-free m parameter must be between 1 and 10"
 
-            if "topology_k_reg" in network_options:
-                k_reg = network_options["topology_k_reg"]
+            if "topology_k_reg" in network_config:
+                k_reg = network_config["topology_k_reg"]
                 if not isinstance(k_reg, int):
                     return False, "Regular lattice k parameter must be an integer"
                 if not (2 <= k_reg <= 20):
                     return False, "Regular lattice k parameter must be between 2 and 20"
 
-            if "topology_n_modules" in network_options:
-                n_modules = network_options["topology_n_modules"]
+            if "topology_n_modules" in network_config:
+                n_modules = network_config["topology_n_modules"]
                 if not isinstance(n_modules, int):
                     return False, "Number of modules must be an integer"
                 if not (2 <= n_modules <= 10):
                     return False, "Number of modules must be between 2 and 10"
 
-            if "topology_p_intra" in network_options:
-                p_intra = network_options["topology_p_intra"]
+            if "topology_p_intra" in network_config:
+                p_intra = network_config["topology_p_intra"]
                 if not isinstance(p_intra, (int, float)):
                     return False, "Intra-module probability must be a numeric value"
                 if not (0.0 <= p_intra <= 1.0):
                     return False, "Intra-module probability must be between 0.0 and 1.0"
 
-            if "topology_p_inter" in network_options:
-                p_inter = network_options["topology_p_inter"]
+            if "topology_p_inter" in network_config:
+                p_inter = network_config["topology_p_inter"]
                 if not isinstance(p_inter, (int, float)):
                     return False, "Inter-module probability must be a numeric value"
                 if not (0.0 <= p_inter <= 1.0):
@@ -506,14 +506,14 @@ class ConfigManager:
 
         return True, ""
 
-    def _validate_advanced_network(self, advanced_options):
+    def _validate_advanced_network(self, advanced_config):
         """Validates advanced network feature parameters"""
-        if not isinstance(advanced_options, dict):
+        if not isinstance(advanced_config, dict):
             return False, "Advanced network options must be a dictionary"
 
         # Validate Dale's Principle - ALL 5 parameters (always validate if present)
-        if "dales_principle" in advanced_options:
-            dales = advanced_options["dales_principle"]
+        if "dales_principle" in advanced_config:
+            dales = advanced_config["dales_principle"]
             if not isinstance(dales, dict):
                 return False, "Dale's principle must be a dictionary"
 
@@ -551,8 +551,8 @@ class ConfigManager:
                     return False, "Inhibitory reversal potential must be between -100 and -50 mV"
 
         # Validate Synaptic Delays - ALL 4 delay types + ALL parameters (always validate if present)
-        if "synaptic_delays" in advanced_options:
-            delays = advanced_options["synaptic_delays"]
+        if "synaptic_delays" in advanced_config:
+            delays = advanced_config["synaptic_delays"]
             if not isinstance(delays, dict):
                 return False, "Synaptic delays must be a dictionary"
 
@@ -592,8 +592,8 @@ class ConfigManager:
                     return False, "Conduction velocity must be a positive number"
 
         # Validate STDP - ALL 8 parameters (always validate if present)
-        if "stdp" in advanced_options:
-            stdp = advanced_options["stdp"]
+        if "stdp" in advanced_config:
+            stdp = advanced_config["stdp"]
             if not isinstance(stdp, dict):
                 return False, "STDP must be a dictionary"
 
@@ -639,8 +639,8 @@ class ConfigManager:
                     return False, "STDP w_max must be between 1.0 and 20.0"
 
         # Validate Distance-Dependent Connectivity - ALL 8 parameters (always validate if present)
-        if "distance_connectivity" in advanced_options:
-            distance = advanced_options["distance_connectivity"]
+        if "distance_connectivity" in advanced_config:
+            distance = advanced_config["distance_connectivity"]
             if not isinstance(distance, dict):
                 return False, "Distance connectivity must be a dictionary"
 

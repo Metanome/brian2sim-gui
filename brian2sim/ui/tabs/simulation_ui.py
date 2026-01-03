@@ -22,6 +22,7 @@ from PyQt6.QtWidgets import (
 # Handle optional matplotlib imports
 try:
     from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+    from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
     from matplotlib.figure import Figure
 
     MATPLOTLIB_AVAILABLE = True
@@ -32,6 +33,10 @@ except ImportError:
     class FigureCanvas:
         def __init__(self, *args, **kwargs):
             pass
+
+    class NavigationToolbar(QWidget):
+        def __init__(self, *args, **kwargs):
+            super().__init__()
 
     class Figure:
         def __init__(self, *args, **kwargs):
@@ -245,12 +250,24 @@ def create_results_panel(main_window):
     results_layout.addWidget(main_window.results_tabs)
 
     # Spike raster plot tab
-    main_window.raster_plot_widget = create_plot_widget("Spike Raster Plot")
+    main_window.raster_plot_widget = create_plot_widget("Spike Raster Plot", main_window)
     main_window.results_tabs.addTab(main_window.raster_plot_widget, "Spike Raster")
 
     # Voltage traces tab
-    main_window.voltage_plot_widget = create_plot_widget("Membrane Voltage")
+    main_window.voltage_plot_widget = create_plot_widget("Membrane Voltage", main_window)
     main_window.results_tabs.addTab(main_window.voltage_plot_widget, "Voltage Traces")
+    
+    # Population Rate (PSTH) tab
+    main_window.psth_plot_widget = create_plot_widget("Population Rate (PSTH)", main_window)
+    main_window.results_tabs.addTab(main_window.psth_plot_widget, "Population Rate")
+
+    # Power Spectrum (FFT) tab
+    main_window.fft_plot_widget = create_plot_widget("Power Spectrum (FFT)", main_window)
+    main_window.results_tabs.addTab(main_window.fft_plot_widget, "Power Spectrum")
+    
+    # ISI Histogram tab
+    main_window.isi_plot_widget = create_plot_widget("ISI Histogram", main_window)
+    main_window.results_tabs.addTab(main_window.isi_plot_widget, "ISI Histogram")
 
     # Statistics tab
     main_window.statistics_widget = create_statistics_widget()
@@ -259,8 +276,8 @@ def create_results_panel(main_window):
     return results_widget
 
 
-def create_plot_widget(title):
-    """Create a matplotlib plot widget or placeholder if matplotlib not available."""
+def create_plot_widget(title, parent=None):
+    """Create a matplotlib plot widget with toolbar."""
     widget = QWidget()
     layout = QVBoxLayout(widget)
 
@@ -268,11 +285,17 @@ def create_plot_widget(title):
         # Create matplotlib figure and canvas
         figure = Figure(figsize=(8, 6), dpi=100)
         canvas = FigureCanvas(figure)
+        
+        # Add Navigation Toolbar
+        toolbar = NavigationToolbar(canvas, widget)
+        layout.addWidget(toolbar)
+        
         layout.addWidget(canvas)
 
         # Store references for later use
         widget.figure = figure
         widget.canvas = canvas
+        widget.toolbar = toolbar
         widget.axes = None  # Will be created when plotting
     else:
         # Create placeholder when matplotlib is not available

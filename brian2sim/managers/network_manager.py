@@ -131,6 +131,9 @@ class NetworkManager(QObject):
         
         if enabled_checkbox and is_enabled is not None:
              enabled_checkbox.setChecked(is_enabled)
+             # If enabling via preset, ensure the tab is visible
+             if is_enabled and hasattr(self.main_window, "ensure_tab_visible"):
+                 self.main_window.ensure_tab_visible("network")
 
         if not enabled_checkbox or not enabled_checkbox.isChecked():
             return  # Don't apply other presets if disabled

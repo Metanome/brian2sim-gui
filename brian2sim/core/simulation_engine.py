@@ -8,7 +8,7 @@ This module uses modular builder classes for constructing simulation components.
 import time
 from datetime import datetime
 
-from PyQt6.QtCore import QObject, QTimer, pyqtSignal
+from PyQt6.QtCore import QObject, QTimer, pyqtSignal, pyqtSlot
 
 # Handle Brian2 import
 try:
@@ -67,6 +67,7 @@ class SimulationEngine(QObject):
         self.gap_junctions = None
         self.monitors = None
 
+    @pyqtSlot(dict)
     def run_simulation(self, params):
         """Run the Brian2 simulation with given parameters."""
         if self.is_running:
@@ -101,6 +102,7 @@ class SimulationEngine(QObject):
             self.is_running = False
             self.should_stop = False
 
+    @pyqtSlot()
     def stop_simulation(self):
         """Request simulation stop."""
         self.should_stop = True

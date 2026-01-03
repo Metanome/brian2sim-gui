@@ -75,22 +75,22 @@ class TestNeuronModelsUI:
         assert neuron_models_ui is not None
 
 
-class TestNoiseOptionsUI:
-    """Tests for noise_options_ui.py."""
+class TestNoiseUI:
+    """Tests for noise_ui.py."""
     
     def test_module_import(self):
-        """Test noise_options_ui can be imported."""
-        from brian2sim.ui.tabs import noise_options_ui
-        assert noise_options_ui is not None
+        """Test noise_ui can be imported."""
+        from brian2sim.ui.tabs import noise_ui
+        assert noise_ui is not None
 
 
-class TestNetworkOptionsUI:
-    """Tests for network_options_ui.py."""
+class TestNetworkUI:
+    """Tests for network_ui.py."""
     
     def test_module_import(self):
-        """Test network_options_ui can be imported."""
-        from brian2sim.ui.tabs import network_options_ui
-        assert network_options_ui is not None
+        """Test network_ui can be imported."""
+        from brian2sim.ui.tabs import network_ui
+        assert network_ui is not None
 
 
 class TestAdvancedNetworkUI:
@@ -196,19 +196,19 @@ class TestUITabFunctionCreation:
         window.sim_params_num_cols = 3
         return window
         
-    def test_noise_options_function_exists(self):
-        """Test noise options creation function exists."""
-        from brian2sim.ui.tabs import noise_options_ui
+    def test_noise_function_exists(self):
+        """Test noise creation function exists."""
+        from brian2sim.ui.tabs import noise_ui
         
         # Should have a creation function
-        funcs = [f for f in dir(noise_options_ui) if f.startswith('create')]
+        funcs = [f for f in dir(noise_ui) if f.startswith('create')]
         assert len(funcs) >= 0  # May have functions or use form generator
         
-    def test_network_options_function_exists(self):
-        """Test network options creation function exists."""
-        from brian2sim.ui.tabs import network_options_ui
+    def test_network_function_exists(self):
+        """Test network creation function exists."""
+        from brian2sim.ui.tabs import network_ui
         
-        funcs = [f for f in dir(network_options_ui) if f.startswith('create')]
+        funcs = [f for f in dir(network_ui) if f.startswith('create')]
         assert len(funcs) >= 0
         
     def test_calcium_dynamics_function_exists(self):
@@ -325,10 +325,10 @@ class TestTabModuleCompleteness:
             "homeostatic_plasticity_ui",
             "input_patterns_ui",
             "multicompartment_ui",
-            "network_options_ui",
+            "network_ui",
             "neuromodulation_ui",
             "neuron_models_ui",
-            "noise_options_ui",
+            "noise_ui",
             "short_term_plasticity_ui",
             "sim_params_ui",
             "simulation_ui",

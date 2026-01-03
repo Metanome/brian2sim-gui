@@ -1,6 +1,6 @@
 """
-Noise options configuration for Brian2 neural network simulator.
-Matches exactly with the original noise_options.py and noise_options_ui.py structure.
+Noise configuration for Brian2 neural network simulator.
+Defines the structure and default values for noise parameters.
 """
 
 NOISE_CONFIG = {

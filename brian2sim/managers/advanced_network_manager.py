@@ -245,85 +245,85 @@ class AdvancedNetworkManager(QObject):
                         is_visible
                     )
 
-    def get_advanced_network_options(self):
-        """Collect all advanced network configuration options from UI elements."""
-        options = {}
+    def get_config(self):
+        """Collect all advanced network configuration from UI elements."""
+        config = {}
 
         # Dale's Principle
         if (
             hasattr(self.main_window, "dales_principle_checkbox")
             and self.main_window.dales_principle_checkbox.isChecked()
         ):
-            dales_options = {"enabled": True}
+            dales_config = {"enabled": True}
             if (
                 hasattr(self.main_window, "dales_principle_forms")
                 and self.main_window.dales_principle_forms
             ):
-                dales_options.update(
+                dales_config.update(
                     self._collect_feature_params(
                         "dales_principle", self.main_window.dales_principle_forms
                     )
                 )
-            options["dales_principle"] = dales_options
+            config["dales_principle"] = dales_config
         else:
-            options["dales_principle"] = {"enabled": False}
+            config["dales_principle"] = {"enabled": False}
 
         # Synaptic Delays
         if (
             hasattr(self.main_window, "synaptic_delays_checkbox")
             and self.main_window.synaptic_delays_checkbox.isChecked()
         ):
-            delays_options = {"enabled": True}
+            delays_config = {"enabled": True}
             if (
                 hasattr(self.main_window, "synaptic_delays_forms")
                 and self.main_window.synaptic_delays_forms
             ):
-                delays_options.update(
+                delays_config.update(
                     self._collect_feature_params(
                         "synaptic_delays", self.main_window.synaptic_delays_forms
                     )
                 )
-            options["synaptic_delays"] = delays_options
+            config["synaptic_delays"] = delays_config
         else:
-            options["synaptic_delays"] = {"enabled": False}
+            config["synaptic_delays"] = {"enabled": False}
 
         # STDP
         if (
             hasattr(self.main_window, "stdp_checkbox")
             and self.main_window.stdp_checkbox.isChecked()
         ):
-            stdp_options = {"enabled": True}
+            stdp_config = {"enabled": True}
             if hasattr(self.main_window, "stdp_forms") and self.main_window.stdp_forms:
-                stdp_options.update(
+                stdp_config.update(
                     self._collect_feature_params("stdp", self.main_window.stdp_forms)
                 )
-            options["stdp"] = stdp_options
+            config["stdp"] = stdp_config
         else:
-            options["stdp"] = {"enabled": False}
+            config["stdp"] = {"enabled": False}
 
         # Distance-Dependent Connectivity
         if (
             hasattr(self.main_window, "distance_connectivity_checkbox")
             and self.main_window.distance_connectivity_checkbox.isChecked()
         ):
-            distance_options = {"enabled": True}
+            distance_config = {"enabled": True}
             if (
                 hasattr(self.main_window, "distance_connectivity_forms")
                 and self.main_window.distance_connectivity_forms
             ):
-                distance_options.update(
+                distance_config.update(
                     self._collect_feature_params(
                         "distance_connectivity", self.main_window.distance_connectivity_forms
                     )
                 )
-            options["distance_connectivity"] = distance_options
+            config["distance_connectivity"] = distance_config
         else:
-            options["distance_connectivity"] = {"enabled": False}
+            config["distance_connectivity"] = {"enabled": False}
 
-        return options
+        return config
 
-    def load_advanced_network_options(self, data):
-        """Load advanced network options into UI elements."""
+    def load_config(self, data):
+        """Load advanced network configuration into UI elements."""
         if not data or not isinstance(data, dict):
             return
 
@@ -629,8 +629,8 @@ w = clip(w - A_pre * {A_minus}, {w_min}, {w_max})
         return config_map.get(feature_name, {}).get(param_key, {})
 
     def get_advanced_network_config(self):
-        """Get advanced network configuration data for config manager."""
-        return self.get_advanced_network_options()
+        """Alias for get_config() - kept for backwards compatibility."""
+        return self.get_config()
 
     def reset_to_defaults(self):
         """Reset all advanced network options to their default values."""

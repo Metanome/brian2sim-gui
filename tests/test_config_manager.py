@@ -219,8 +219,8 @@ class TestConfigCollection:
         # Setup mock managers
         mock_window.neuron_models_manager = Mock()
         mock_window.sim_params_manager = Mock()
-        mock_window.noise_options_manager = Mock()
-        mock_window.network_options_manager = Mock()
+        mock_window.noise_manager = Mock()
+        mock_window.network_manager = Mock()
         
         # Configure return values
         mock_window.neuron_models_manager.get_neuron_model_config.return_value = {
@@ -229,10 +229,10 @@ class TestConfigCollection:
         mock_window.sim_params_manager.get_sim_params_config.return_value = {
             "num_neurons": 100, "sim_time": 1000
         }
-        mock_window.noise_options_manager.get_noise_options_config.return_value = {
+        mock_window.noise_manager.get_config.return_value = {
             "enabled": False
         }
-        mock_window.network_options_manager.get_network_options_config.return_value = {
+        mock_window.network_manager.get_config.return_value = {
             "enabled": False
         }
         
@@ -255,8 +255,8 @@ class TestAllParameterValidation:
         # Setup mock managers with proper method names
         mock_window.neuron_models_manager = Mock()
         mock_window.sim_params_manager = Mock()
-        mock_window.noise_options_manager = Mock()
-        mock_window.network_options_manager = Mock()
+        mock_window.noise_manager = Mock()
+        mock_window.network_manager = Mock()
         
         # Configure valid return values matching actual method names
         mock_window.neuron_models_manager.get_neuron_model_config.return_value = {
@@ -266,8 +266,8 @@ class TestAllParameterValidation:
             "num_neurons": 100, "sim_time": 1000, "dt": 0.1,
             "input_current": 1.0, "current_start": 0, "current_duration": 500
         }
-        mock_window.noise_options_manager.get_noise_options_config.return_value = {"enabled": False}
-        mock_window.network_options_manager.get_network_options_config.return_value = {"enabled": False}
+        mock_window.noise_manager.get_config.return_value = {"enabled": False}
+        mock_window.network_manager.get_config.return_value = {"enabled": False}
         
         manager = ConfigManager(mock_window)
         is_valid, error_msg = manager.validate_all_parameters()

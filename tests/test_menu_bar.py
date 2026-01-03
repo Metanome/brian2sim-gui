@@ -19,9 +19,9 @@ class TestMenuBarManager:
         # Mock managers that exist
         main_window.neuron_models_manager = Mock()
         main_window.sim_params_manager = Mock()
-        main_window.noise_options_manager = Mock()
+        main_window.noise_manager = Mock()
         main_window.input_patterns_manager = Mock()
-        main_window.network_options_manager = Mock()
+        main_window.network_manager = Mock()
         main_window.advanced_network_manager = Mock()
         
         # Mock validation manager
@@ -88,7 +88,7 @@ class TestMenuBarManager:
     def test_new_simulation_without_reset_methods(self, menu_bar_manager, mock_main_window):
         """Test new_simulation when managers don't have reset_to_defaults."""
         # Remove reset_to_defaults from managers (use delattr if it exists)
-        for manager_name in ['neuron_models_manager', 'sim_params_manager', 'noise_options_manager']:
+        for manager_name in ['neuron_models_manager', 'sim_params_manager', 'noise_manager']:
             manager = getattr(mock_main_window, manager_name)
             if hasattr(manager, 'reset_to_defaults'):
                 delattr(manager, 'reset_to_defaults')

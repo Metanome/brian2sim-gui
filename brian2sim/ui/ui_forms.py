@@ -602,8 +602,8 @@ class SimParamsFormGenerator(BaseFormGenerator):
             self._update_all_dependencies()
 
 
-class NoiseOptionsFormGenerator(BaseFormGenerator):
-    """Form generator for noise options. Uses QVBoxLayout with an enable checkbox and a QGridLayout for params."""
+class NoiseFormGenerator(BaseFormGenerator):
+    """Form generator for noise. Uses QVBoxLayout with an enable checkbox and a QGridLayout for params."""
 
     def __init__(self, config):
         super().__init__(config)
@@ -632,7 +632,7 @@ class NoiseOptionsFormGenerator(BaseFormGenerator):
                 enable_layout.setContentsMargins(8, 5, 0, 5)  # Add top/bottom margins
                 enable_layout.addWidget(enable_checkbox)
 
-                default_enable_label = "Enable Noise Options"
+                default_enable_label = "Enable Noise"
                 enable_label_text = enabled_config.get("label", default_enable_label)
                 enable_label = QLabel(enable_label_text)
                 enable_layout.addWidget(enable_label)
@@ -702,8 +702,8 @@ class NoiseOptionsFormGenerator(BaseFormGenerator):
         self.param_widgets["main"] = param_widgets
 
 
-class NetworkOptionsFormGenerator(BaseFormGenerator):
-    """Form generator for network options. Uses QVBoxLayout with an enable checkbox and QFormLayout for params."""
+class NetworkFormGenerator(BaseFormGenerator):
+    """Form generator for network. Uses QVBoxLayout with an enable checkbox and QFormLayout for params."""
 
     def _create_forms(self):
         # Main widget for the whole section

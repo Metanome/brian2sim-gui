@@ -21,6 +21,10 @@ class SimulationManager(QObject):
     progress_updated = pyqtSignal(int, str)  # progress percentage, status message
     simulation_finished = pyqtSignal(bool)  # success flag
     log_message = pyqtSignal(str)  # log message
+    
+    # Signals for Engine control (Cross-thread)
+    start_simulation_signal = pyqtSignal(dict)
+    stop_simulation_signal = pyqtSignal()
 
     def __init__(self, main_window):
         super().__init__()
@@ -49,6 +53,10 @@ class SimulationManager(QObject):
             self.simulation_engine.progress_updated.connect(self.on_progress_updated)
             self.simulation_engine.simulation_completed.connect(self.on_simulation_completed)
             self.simulation_engine.simulation_error.connect(self.on_simulation_error)
+            
+            # Connect manager signals to engine slots
+            self.start_simulation_signal.connect(self.simulation_engine.run_simulation)
+            self.stop_simulation_signal.connect(self.simulation_engine.stop_simulation)
 
     def start_simulation(self):
         """Start the neural network simulation."""
@@ -76,9 +84,9 @@ class SimulationManager(QObject):
             self.log_message.emit(f"Starting simulation at {datetime.now().strftime('%H:%M:%S')}")
             self.log_message.emit(f"Parameters: {self._format_params_summary(params)}")
 
-            # Start simulation in engine
+            # Start simulation in engine via signal
             if self.simulation_engine:
-                self.simulation_engine.run_simulation(params)
+                self.start_simulation_signal.emit(params)
             else:
                 # Fallback for testing without engine
                 self._simulate_progress_for_testing()
@@ -96,7 +104,7 @@ class SimulationManager(QObject):
         self.log_message.emit("Stopping simulation...")
 
         if self.simulation_engine:
-            self.simulation_engine.stop_simulation()
+            self.stop_simulation_signal.emit()
 
         self._cleanup_simulation()
         self.log_message.emit("Simulation stopped by user")
@@ -310,7 +318,7 @@ class SimulationManager(QObject):
 
         if hasattr(self.main_window, "advanced_network_manager"):
             params["advanced_network"] = (
-                self.main_window.advanced_network_manager.get_advanced_network_options()
+                self.main_window.advanced_network_manager.get_config()
             )
 
         if hasattr(self.main_window, "input_patterns_manager"):

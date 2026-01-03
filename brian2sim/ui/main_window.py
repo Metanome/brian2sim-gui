@@ -1,6 +1,6 @@
 import sys
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QThread
 from PyQt6.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -73,6 +73,12 @@ class MainWindow(QMainWindow):
 
         # Initialize simulation components
         self.simulation_engine = SimulationEngine()
+        
+        # Move simulation engine to background thread
+        self.simulation_thread = QThread()
+        self.simulation_engine.moveToThread(self.simulation_thread)
+        self.simulation_thread.start()
+        
         self.results_manager = ResultsManager(self)
         self.code_generator = CodeGenerator()
         # Start the simulation manager
@@ -238,62 +244,46 @@ class MainWindow(QMainWindow):
         self.tabs = QTabWidget()
         main_layout.addWidget(self.tabs)
 
-        # Store tab information for dynamic visibility management
-        self.current_user_level = "beginner"  # Default to beginner mode
-
         # Use TabFactory to create all tabs
         tab_factory = TabFactory(self)
         self.tab_info = tab_factory.create_all_tabs(self.tabs)
 
-        # Set initial tab
-        self.tabs.setCurrentIndex(0)
-
-        # Apply initial tab visibility for beginner level
-        self.set_user_level("beginner")
-
-    def set_user_level(self, level):
-        """Set the user level and update tab visibility accordingly."""
-        self.current_user_level = level
-
-        # Define which tabs are visible for each user level
-        # Core and Simulation tabs are ALWAYS visible - they're essential
-        level_visibility = {
-            "beginner": ["core", "simulation"],
-            "intermediate": ["core", "simulation", "network", "synapses"],
-            "advanced": [
-                "core",
-                "simulation",
-                "network",
-                "synapses",
-                "plasticity",
-                "neuromodulation",
-                "multicompartment",
-            ],
-        }
-
-        # Show/hide tabs based on user level
-        visible_tabs = level_visibility.get(level, level_visibility["beginner"])
-
+        # Apply initial tab visibility based on default config
         for tab_key, tab_data in self.tab_info.items():
-            # Core and Simulation tabs are always visible - never hide them
-            if tab_key in ["core", "simulation"]:
-                should_be_visible = True
-            else:
-                should_be_visible = tab_key in visible_tabs
-
-            tab_data["visible"] = should_be_visible
-
-            if should_be_visible:
-                # Check if tab is already in the tab widget
-                current_index = self.tabs.indexOf(tab_data["widget"])
-                if current_index == -1:
-                    # Tab is not currently in widget, add it back in correct position
-                    self._restore_tab(tab_key, tab_data)
-            else:
-                # Hide tab by removing it from tab widget
+            if not tab_data.get("visible", True):
+                # Hide tab by removing it from tab widget if it's not supposed to be visible by default
                 current_index = self.tabs.indexOf(tab_data["widget"])
                 if current_index != -1:
                     self.tabs.removeTab(current_index)
+
+        # Set initial tab
+        self.tabs.setCurrentIndex(0)
+
+    def ensure_tab_visible(self, tab_key):
+        """Ensure a specific tab is visible in the UI.
+        
+        This method checks if the tab is currently visible (present in QTabWidget).
+        If not, it adds it back using _restore_tab, updates the internal visibility state,
+        and syncs the View menu checkboxes.
+        
+        Args:
+            tab_key (str): The key of the tab to show (e.g., 'network', 'synapses').
+        """
+        if tab_key in self.tab_info:
+            tab_data = self.tab_info[tab_key]
+            
+            # If already marked as visible and present in tabs, do nothing
+            is_visible = tab_data.get("visible", False)
+            current_index = self.tabs.indexOf(tab_data["widget"])
+            
+            if not is_visible or current_index == -1:
+                # Tab needs to be shown
+                self._restore_tab(tab_key, tab_data)
+                tab_data["visible"] = True
+                
+                # Sync the View menu to match new state
+                if hasattr(self, "menu_bar_manager"):
+                    self.menu_bar_manager.sync_tab_checkboxes()
 
     def _restore_tab(self, tab_key, tab_data):
         """Restore a tab to its correct position in the tab widget."""
@@ -394,7 +384,7 @@ class MainWindow(QMainWindow):
                 self.network_manager.load_config(config_data.get("network", {}))
 
                 # 6. Load advanced network options
-                self.advanced_network_manager.load_advanced_network_options(
+                self.advanced_network_manager.load_config(
                     config_data.get("advanced_network", {})
                 )
 

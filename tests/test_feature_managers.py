@@ -4,25 +4,25 @@ Tests UI managers for noise, network, advanced features, and parameter handling.
 """
 import pytest
 from unittest.mock import Mock, MagicMock
-from brian2sim.managers.noise_manager import NoiseOptionsManager
-from brian2sim.managers.network_manager import NetworkOptionsManager
+from brian2sim.managers.noise_manager import NoiseManager
+from brian2sim.managers.network_manager import NetworkManager
 from brian2sim.managers.sim_params_manager import SimParamsManager
 from brian2sim.managers.neuron_models_manager import NeuronModelsManager
 
 
-class TestNoiseOptionsManager:
-    """Tests for NoiseOptionsManager."""
+class TestNoiseManager:
+    """Tests for NoiseManager."""
     
     def test_manager_creation(self):
-        """Test creating NoiseOptionsManager."""
+        """Test creating NoiseManager."""
         mock_window = Mock()
-        manager = NoiseOptionsManager(mock_window)
+        manager = NoiseManager(mock_window)
         
         assert manager is not None
         assert manager.main_window == mock_window
         
-    def test_get_noise_options_disabled(self):
-        """Test getting noise options when disabled."""
+    def test_get_config_disabled(self):
+        """Test getting noise config when disabled."""
         mock_window = Mock()
         mock_window.noise_form_generator = Mock()
         
@@ -33,13 +33,13 @@ class TestNoiseOptionsManager:
             "enabled": mock_checkbox
         }
         
-        manager = NoiseOptionsManager(mock_window)
-        options = manager.get_noise_options()
+        manager = NoiseManager(mock_window)
+        options = manager.get_config()
         
         assert options["enabled"] is False
         
-    def test_get_noise_options_enabled(self):
-        """Test getting noise options when enabled."""
+    def test_get_config_enabled(self):
+        """Test getting noise config when enabled."""
         mock_window = Mock()
         mock_window.noise_form_generator = Mock()
         
@@ -55,22 +55,22 @@ class TestNoiseOptionsManager:
             "intensity": 0.1
         }
         
-        manager = NoiseOptionsManager(mock_window)
-        options = manager.get_noise_options()
+        manager = NoiseManager(mock_window)
+        options = manager.get_config()
         
         assert options["enabled"] is True
         assert "method" in options
         assert "intensity" in options
         
-    def test_load_noise_options(self):
-        """Test loading noise options into UI."""
+    def test_load_config(self):
+        """Test loading noise config into UI."""
         mock_window = Mock()
         mock_window.noise_form_generator = Mock()
         
-        manager = NoiseOptionsManager(mock_window)
+        manager = NoiseManager(mock_window)
         
         data = {"enabled": True, "method": "Gaussian", "intensity": 0.2}
-        manager.load_noise_options(data)
+        manager.load_config(data)
         
         assert mock_window.noise_form_generator.load_params_from_config.called
         
@@ -79,31 +79,31 @@ class TestNoiseOptionsManager:
         mock_window = Mock()
         mock_window.noise_form_generator = Mock()
         
-        manager = NoiseOptionsManager(mock_window)
+        manager = NoiseManager(mock_window)
         
         preset = {
-            "noise_enabled": True,
-            "noise_intensity": 0.5,
-            "noise_method": "Ornstein-Uhlenbeck"
+            "enabled": True,
+            "intensity": 0.5,
+            "method": "Ornstein-Uhlenbeck"
         }
         
         manager.apply_preset_values(preset)
         assert mock_window.noise_form_generator.load_params_from_config.called
 
 
-class TestNetworkOptionsManager:
-    """Tests for NetworkOptionsManager."""
+class TestNetworkManager:
+    """Tests for NetworkManager."""
     
     def test_manager_creation(self):
-        """Test creating NetworkOptionsManager."""
+        """Test creating NetworkManager."""
         mock_window = Mock()
-        manager = NetworkOptionsManager(mock_window)
+        manager = NetworkManager(mock_window)
         
         assert manager is not None
         assert manager.main_window == mock_window
         
-    def test_get_network_options_disabled(self):
-        """Test getting network options when disabled."""
+    def test_get_config_disabled(self):
+        """Test getting network config when disabled."""
         mock_window = Mock()
         mock_window.network_form_generator = Mock()
         
@@ -114,13 +114,13 @@ class TestNetworkOptionsManager:
             "enabled": mock_checkbox
         }
         
-        manager = NetworkOptionsManager(mock_window)
-        options = manager.get_network_options_config()
+        manager = NetworkManager(mock_window)
+        options = manager.get_config()
         
-        assert options["synapse_enabled"] is False
+        assert options["enabled"] is False
         
-    def test_get_network_options_enabled(self):
-        """Test getting network options when enabled."""
+    def test_get_config_enabled(self):
+        """Test getting network config when enabled."""
         mock_window = Mock()
         mock_window.network_form_generator = Mock()
         
@@ -137,14 +137,14 @@ class TestNetworkOptionsManager:
             "synaptic_weight": 0.5
         }
         
-        manager = NetworkOptionsManager(mock_window)
-        options = manager.get_network_options_config()
+        manager = NetworkManager(mock_window)
+        options = manager.get_config()
         
-        assert options["synapse_enabled"] is True
-        assert "topology_type" in options
+        assert options["enabled"] is True
+        assert "network_topology" in options
         
-    def test_load_network_options(self):
-        """Test loading network options into UI."""
+    def test_load_config(self):
+        """Test loading network config into UI."""
         mock_window = Mock()
         mock_window.network_form_generator = Mock()
         
@@ -160,15 +160,15 @@ class TestNetworkOptionsManager:
             "network_topology": mock_topology
         }
         
-        manager = NetworkOptionsManager(mock_window)
+        manager = NetworkManager(mock_window)
         
         data = {
-            "synapse_enabled": True,
-            "topology_type": "random",
+            "enabled": True,
+            "network_topology": "random",
             "synaptic_weight": 0.8
         }
         
-        manager.load_network_options(data)
+        manager.load_config(data)
         
         assert mock_checkbox.setChecked.called
 
@@ -350,7 +350,7 @@ class TestManagerSignals:
     def test_noise_manager_signals(self):
         """Test noise manager param_changed signal."""
         mock_window = Mock()
-        manager = NoiseOptionsManager(mock_window)
+        manager = NoiseManager(mock_window)
         
         signal_emitted = False
         def on_signal():
@@ -365,7 +365,7 @@ class TestManagerSignals:
     def test_network_manager_signals(self):
         """Test network manager param_changed signal."""
         mock_window = Mock()
-        manager = NetworkOptionsManager(mock_window)
+        manager = NetworkManager(mock_window)
         
         signal_emitted = False
         def on_signal():
@@ -386,8 +386,8 @@ class TestManagerEdgeCases:
         mock_window = Mock()
         del mock_window.noise_form_generator
         
-        manager = NoiseOptionsManager(mock_window)
-        options = manager.get_noise_options()
+        manager = NoiseManager(mock_window)
+        options = manager.get_config()
         
         assert options["enabled"] is False
         
@@ -396,18 +396,18 @@ class TestManagerEdgeCases:
         mock_window = Mock()
         del mock_window.network_form_generator
         
-        manager = NetworkOptionsManager(mock_window)
-        options = manager.get_network_options_config()
+        manager = NetworkManager(mock_window)
+        options = manager.get_config()
         
-        assert options["synapse_enabled"] is False
+        assert options["enabled"] is False
         
     def test_load_none_data(self):
         """Test loading None data doesn't crash."""
         mock_window = Mock()
         mock_window.noise_form_generator = Mock()
         
-        manager = NoiseOptionsManager(mock_window)
-        manager.load_noise_options(None)
+        manager = NoiseManager(mock_window)
+        manager.load_config(None)
         
         # Should not crash
         
@@ -416,8 +416,8 @@ class TestManagerEdgeCases:
         mock_window = Mock()
         mock_window.noise_form_generator = Mock()
         
-        manager = NoiseOptionsManager(mock_window)
-        manager.load_noise_options("invalid")
+        manager = NoiseManager(mock_window)
+        manager.load_config("invalid")
         
         # Should not crash
 

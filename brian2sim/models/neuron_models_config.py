@@ -329,7 +329,7 @@ NEURON_MODELS_CONFIG = {
                     "input_current": 0.0, # No current injection
                     "num_neurons": 4000,  # Standard: 3200 Ex, 800 In
                 },
-                 "noise": {"enabled": False},
+                 "noise": {"enabled": True, "intensity": 0.5},
                  "network": {
                     "enabled": True,
                     "network_topology": "coba_benchmark", 
