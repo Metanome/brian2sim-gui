@@ -80,3 +80,8 @@ class SynapticReceptorsManager(QObject):
                         widget.setCurrentText(str(value))
                 except (ValueError, TypeError) as e:
                     print(f"Error loading synaptic receptors config for {key}: {e}")
+
+    def reset_to_defaults(self):
+        """Reset synaptic receptors to their default values."""
+        if hasattr(self.main_window, "synaptic_receptors_form_generator"):
+            self.main_window.synaptic_receptors_form_generator.reset_to_defaults()

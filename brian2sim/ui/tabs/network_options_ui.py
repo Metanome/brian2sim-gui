@@ -38,11 +38,11 @@ def create_network_options_group(main_window):
             if param_key != "enabled":  # Don't connect the main enable checkbox
                 if hasattr(widget, "valueChanged"):
                     widget.valueChanged.connect(
-                        main_window.network_options_manager.on_param_changed
+                        main_window.network_manager.on_param_changed
                     )
                 elif hasattr(widget, "currentIndexChanged"):
                     widget.currentIndexChanged.connect(
-                        main_window.network_options_manager.on_param_changed
+                        main_window.network_manager.on_param_changed
                     )
 
     return network_options_group

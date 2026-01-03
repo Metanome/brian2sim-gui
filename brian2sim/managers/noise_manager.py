@@ -1,7 +1,7 @@
 from PyQt6.QtCore import QObject, pyqtSignal
 
 
-class NoiseOptionsManager(QObject):
+class NoiseManager(QObject):
     param_changed = pyqtSignal()  # Signal emitted when any parameter changes
 
     def __init__(self, main_window):
@@ -25,8 +25,8 @@ class NoiseOptionsManager(QObject):
         """Called when any noise parameter changes"""
         self.param_changed.emit()
 
-    def get_noise_options(self):
-        """Collects noise configuration options from the UI elements using the config-driven approach."""
+    def get_config(self):
+        """Collects noise configuration from the UI elements."""
         if not hasattr(self.main_window, "noise_form_generator"):
             return {"enabled": False}
 
@@ -40,8 +40,8 @@ class NoiseOptionsManager(QObject):
         options = self.main_window.noise_form_generator.get_params_for_save()
         return options
 
-    def load_noise_options(self, data):
-        """Loads noise options into the UI elements using the form generator."""
+    def load_config(self, data):
+        """Loads noise config into the UI elements using the form generator."""
         if not data or not isinstance(data, dict):
             return
 
@@ -50,18 +50,27 @@ class NoiseOptionsManager(QObject):
 
     def apply_preset_values(self, preset_values):
         """Apply preset values to noise parameters using the form generator."""
+        if not hasattr(self.main_window, "noise_form_generator"):
+            return
+            
+        # Map preset values to the form generator format if needed
+        form_data = {}
+        
+        # Use direct keys only - no legacy support
+        if "enabled" in preset_values:
+            form_data["enabled"] = preset_values["enabled"]
+        
+        if "intensity" in preset_values:
+            form_data["intensity"] = preset_values["intensity"]
+            
+        if "method" in preset_values:
+            form_data["method"] = preset_values["method"]
+
+        self.main_window.noise_form_generator.load_params_from_config(form_data)
+        # Note: visibility sync is now handled automatically by BaseFormGenerator.load_params_from_config()
+
+    def reset_to_defaults(self):
+        """Reset noise options to their default values."""
         if hasattr(self.main_window, "noise_form_generator"):
-            # Map preset values to the form generator format
-            form_data = {}
-            if "noise_enabled" in preset_values:
-                form_data["enabled"] = preset_values["noise_enabled"]
-            if "noise_intensity" in preset_values:
-                form_data["intensity"] = preset_values["noise_intensity"]
-            if "noise_method" in preset_values:
-                form_data["method"] = preset_values["noise_method"]
+            self.main_window.noise_form_generator.reset_to_defaults()
 
-            self.main_window.noise_form_generator.load_params_from_config(form_data)
-
-    def get_noise_options_config(self):
-        """Get noise options configuration data for config manager."""
-        return self.get_noise_options()

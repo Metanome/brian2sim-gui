@@ -35,13 +35,13 @@ class ConfigManager:
             config_data["simulation"] = self.main_window.sim_params_manager.get_sim_params_config()
 
         # Get noise options
-        if hasattr(self.main_window, "noise_options_manager"):
-            config_data["noise"] = self.main_window.noise_options_manager.get_noise_options_config()
+        if hasattr(self.main_window, "noise_manager"):
+            config_data["noise"] = self.main_window.noise_manager.get_config()
 
         # Get network options
-        if hasattr(self.main_window, "network_options_manager"):
+        if hasattr(self.main_window, "network_manager"):
             config_data["network"] = (
-                self.main_window.network_options_manager.get_network_options_config()
+                self.main_window.network_manager.get_config()
             )
 
         # Get advanced network options
@@ -425,9 +425,9 @@ class ConfigManager:
             return False, "Network options must be a dictionary"
 
         # Validate synaptic connections enabled flag
-        if "synapse_enabled" in network_options:
-            if not isinstance(network_options["synapse_enabled"], bool):
-                return False, "Network 'synapse_enabled' must be a boolean value"
+        if "enabled" in network_options:
+            if not isinstance(network_options["enabled"], bool):
+                return False, "Network 'enabled' must be a boolean value"
 
         # Validate synaptic weight (always validate if present)
         if "synaptic_weight" in network_options:
@@ -438,14 +438,14 @@ class ConfigManager:
                 return False, "Synaptic weight must be between 0.0 and 100.0"
 
         # Validate network topology (always validate if present)
-        if "topology_type" in network_options:
-            topology = network_options["topology_type"]
-            valid_topologies = ["random", "small_world", "scale_free", "regular", "modular"]
+        if "network_topology" in network_options:
+            topology = network_options["network_topology"]
+            valid_topologies = ["random", "small_world", "scale_free", "regular", "modular", "coba_benchmark"]
             if topology not in valid_topologies:
                 return False, f"Network topology must be one of: {', '.join(valid_topologies)}"
 
         # If network is enabled, validate topology-specific parameters
-        if network_options.get("synapse_enabled", False):
+        if network_options.get("enabled", False):
 
             # Validate topology-specific parameters
             if "syn_prob" in network_options:

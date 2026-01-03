@@ -48,6 +48,10 @@ class NeuronBuilder:
             self.neurons = self._build_lif_neurons(
                 num_neurons, sim_params, neuron_params, ca_enabled, calcium_dynamics_params
             )
+        elif model_type == "lif_coba":
+            self.neurons = self._build_lif_coba_neurons(
+                num_neurons, sim_params, neuron_params
+            )
         elif model_type == "izhikevich":
             self.neurons = self._build_izhikevich_neurons(num_neurons, neuron_params)
         elif model_type == "adex":
@@ -56,6 +60,7 @@ class NeuronBuilder:
             self.neurons = self._build_hh_neurons(num_neurons, neuron_params)
         elif model_type == "custom":
             self.neurons = self._build_custom_neurons(num_neurons, sim_params, neuron_params)
+
         else:
             self.neurons = self._build_default_neurons(num_neurons)
 
@@ -116,6 +121,69 @@ class NeuronBuilder:
         if ca_enabled and calcium_params:
             self._initialize_calcium(neurons, calcium_params)
 
+        return neurons
+
+    def _build_lif_coba_neurons(
+        self, num_neurons, sim_params, neuron_params
+    ):
+        """Build Conductance-Based LIF neurons."""
+        params = neuron_params.get("parameters", neuron_params)
+        
+        Cm = params.get("Cm", 200.0) * b2.pF
+        gl = params.get("gl", 10.0) * b2.nS
+        El = params.get("El", -60.0) * b2.mV
+        v_threshold = params.get("v_threshold", -50.0) * b2.mV
+        v_reset = params.get("v_reset", -60.0) * b2.mV
+        refractory = params.get("refractory", 5.0) * b2.ms
+        
+        Ee = params.get("Ee", 0.0) * b2.mV
+        Ei = params.get("Ei", -80.0) * b2.mV
+        taue = params.get("taue", 5.0) * b2.ms
+        taui = params.get("taui", 10.0) * b2.ms
+        
+        eqs = """
+        dv/dt = (gl * (El - v) + ge * (Ee - v) + gi * (Ei - v) + I) / Cm : volt (unless refractory)
+        dge/dt = -ge / taue : siemens
+        dgi/dt = -gi / taui : siemens
+        I : amp
+        taue : second
+        taui : second
+        Cm : farad
+        gl : siemens
+        El : volt
+        Ee : volt
+        Ei : volt
+        """
+        
+        neurons = b2.NeuronGroup(
+            num_neurons,
+            eqs,
+            threshold="v > v_threshold",
+            reset="v = v_reset",
+            refractory=refractory,
+            method="euler",
+            namespace={
+                "v_threshold": v_threshold,
+                "v_reset": v_reset,
+            },
+        )
+        
+        
+        # Random initialization to kickstart activity (Standard for Vogels & Abbott)
+        neurons.v = "v_reset + rand() * (v_threshold - v_reset + 5*mV)"
+        neurons.ge = 0 * b2.nS
+        neurons.gi = 0 * b2.nS
+        neurons.I = 0 * b2.amp
+        
+        # Set parameters in namespace or as variables
+        neurons.taue = taue
+        neurons.taui = taui
+        neurons.Cm = Cm
+        neurons.gl = gl
+        neurons.El = El
+        neurons.Ee = Ee
+        neurons.Ei = Ei
+        
         return neurons
 
 

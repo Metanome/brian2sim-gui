@@ -44,6 +44,12 @@ class NeuromodulationManager(QObject):
             defaults[key] = config.get("default")
         return defaults
 
+    def get_parameters(self):
+        """Get current neuromodulation parameters from UI."""
+        if hasattr(self.main_window, "neuromodulation_form_generator"):
+            return self.main_window.neuromodulation_form_generator.get_params_for_save()
+        return self.get_default_parameters()
+
     def validate_parameters(self, params):
         """Validate neuromodulation parameters."""
         validated = {}
@@ -424,3 +430,8 @@ class NeuromodulationManager(QObject):
             raise Exception("File not found")
         except Exception as e:
             raise Exception(f"Failed to import parameters: {e}")
+
+    def reset_to_defaults(self):
+        """Reset neuromodulation to their default values."""
+        if hasattr(self.main_window, "neuromodulation_form_generator"):
+            self.main_window.neuromodulation_form_generator.reset_to_defaults()

@@ -61,12 +61,12 @@ NEURON_MODELS_CONFIG = {
                     "current_start": 100,
                     "current_duration": 300,
                 },
-                "noise_options": {
-                    "noise_enabled": True,
-                    "noise_intensity": 0.1,
-                    "noise_method": "additive",
+                "noise": {
+                    "enabled": True,
+                    "intensity": 0.1,
+                    "method": "additive",
                 },
-                "network_options": {"synapse_enabled": False},
+                "network": {"enabled": False},
             },
             "fast_spiking": {
                 "display_name": "Fast Spiking Interneuron",
@@ -84,12 +84,12 @@ NEURON_MODELS_CONFIG = {
                     "current_start": 100,
                     "current_duration": 300,
                 },
-                "noise_options": {
-                    "noise_enabled": True,
-                    "noise_intensity": 0.05,  # Less noise for precise firing
-                    "noise_method": "additive",
+                "noise": {
+                    "enabled": True,
+                    "intensity": 0.05,  # Less noise for precise firing
+                    "method": "additive",
                 },
-                "network_options": {"synapse_enabled": False},
+                "network": {"enabled": False},
             },
             "adapting": {
                 "display_name": "Adapting Neuron",
@@ -107,12 +107,12 @@ NEURON_MODELS_CONFIG = {
                     "current_start": 100,
                     "current_duration": 300,
                 },
-                "noise_options": {
-                    "noise_enabled": True,
-                    "noise_intensity": 0.15,
-                    "noise_method": "additive",
+                "noise": {
+                    "enabled": True,
+                    "intensity": 0.15,
+                    "method": "additive",
                 },
-                "network_options": {"synapse_enabled": False},
+                "network": {"enabled": False},
             },
             "cortical_regular_spiking": {
                 "display_name": "Cortical Regular Spiking",
@@ -130,12 +130,12 @@ NEURON_MODELS_CONFIG = {
                     "current_start": 100,  # Start time of input (ms)
                     "current_duration": 300,  # Duration of input (ms)
                 },
-                "noise_options": {
-                    "noise_enabled": True,
-                    "noise_intensity": 0.1,  # σ = 0.1 nA for biological membrane noise
-                    "noise_method": "additive",
+                "noise": {
+                    "enabled": True,
+                    "intensity": 0.1,  # σ = 0.1 nA for biological membrane noise
+                    "method": "additive",
                 },
-                "network_options": {"synapse_enabled": False},
+                "network": {"enabled": False},
             },
             "hippocampal_pyramidal": {
                 "display_name": "Hippocampal Pyramidal",
@@ -153,12 +153,12 @@ NEURON_MODELS_CONFIG = {
                     "current_start": 100,
                     "current_duration": 300,
                 },
-                "noise_options": {
-                    "noise_enabled": True,
-                    "noise_intensity": 0.15,  # Higher noise for pyramidal cells
-                    "noise_method": "additive",
+                "noise": {
+                    "enabled": True,
+                    "intensity": 0.15,  # Higher noise for pyramidal cells
+                    "method": "additive",
                 },
-                "network_options": {"synapse_enabled": False},
+                "network": {"enabled": False},
             },
             "fast_spiking_interneuron": {
                 "display_name": "Fast-Spiking Interneuron",
@@ -176,12 +176,12 @@ NEURON_MODELS_CONFIG = {
                     "current_start": 100,
                     "current_duration": 300,
                 },
-                "noise_options": {
-                    "noise_enabled": True,
-                    "noise_intensity": 0.05,  # Lower noise for precise FS firing
-                    "noise_method": "additive",
+                "noise": {
+                    "enabled": True,
+                    "intensity": 0.05,  # Lower noise for precise FS firing
+                    "method": "additive",
                 },
-                "network_options": {"synapse_enabled": False},
+                "network": {"enabled": False},
             },
             "cortical_network": {
                 "display_name": "Cortical Microcircuit",
@@ -199,17 +199,141 @@ NEURON_MODELS_CONFIG = {
                     "current_start": 100,
                     "current_duration": 800,
                 },
-                "noise_options": {
-                    "noise_enabled": True,
-                    "noise_intensity": 0.1,
-                    "noise_method": "additive",
+                "noise": {
+                    "enabled": True,
+                    "intensity": 0.1,
+                    "method": "additive",
                 },
-                "network_options": {
-                    "synapse_enabled": True,
+                "network": {
+                    "enabled": True,
                     "topology_type": "random",
                     "synaptic_weight": 0.2,  # Moderate synaptic strength
                     "syn_prob": 0.1,  # Sparse connectivity
                     "syn_delay": 2.0,  # 2ms synaptic delay
+                },
+            },
+        },
+    },
+    "lif_coba": {
+        "display_name": "LIF (Conductance-Based)",
+        "params": {
+            "Cm": {
+                "type": float,
+                "label": "Cm (pF):",
+                "tooltip": "Membrane Capacitance.\nTypical: 200 pF",
+                "default": 200.0,
+                "min": 10.0,
+                "max": 1000.0,
+                "step": 10.0,
+            },
+            "gl": {
+                "type": float,
+                "label": "gl (nS):",
+                "tooltip": "Leak Conductance.\nTypical: 10 nS",
+                "default": 10.0,
+                "min": 1.0,
+                "max": 100.0,
+                "step": 0.5,
+            },
+            "El": {
+                "type": float,
+                "label": "El (mV):",
+                "tooltip": "Leak Reversal Potential.\nTypical: -60 mV",
+                "default": -60.0,
+                "min": -100.0,
+                "max": -40.0,
+                "step": 1.0,
+            },
+            "v_threshold": {
+                "type": float,
+                "label": "Vt (mV):",
+                "tooltip": "Spiking Threshold.\nTypical: -50 mV",
+                "default": -50.0,
+                "min": -70.0,
+                "max": -40.0,
+                "step": 0.5,
+            },
+            "v_reset": {
+                "type": float,
+                "label": "Vr (mV):",
+                "tooltip": "Reset Potential.\nTypical: -60 mV",
+                "default": -60.0,
+                "min": -80.0,
+                "max": -50.0,
+                "step": 1.0,
+            },
+             "refractory": {
+                "type": float,
+                "label": "Refractory (ms):",
+                "tooltip": "Refractory Period.\nTypical: 5 ms",
+                "default": 5.0,
+                "min": 0.0,
+                "max": 10.0,
+                "step": 0.1,
+            },
+            "Ee": {
+                "type": float,
+                "label": "Ee (mV):",
+                "tooltip": "Excitatory Reversal Potential.\nTypical: 0 mV",
+                "default": 0.0,
+                "min": -20.0,
+                "max": 20.0,
+                "step": 1.0,
+            },
+            "Ei": {
+                "type": float,
+                "label": "Ei (mV):",
+                "tooltip": "Inhibitory Reversal Potential.\nTypical: -80 mV",
+                "default": -80.0,
+                "min": -100.0,
+                "max": -60.0,
+                "step": 1.0,
+            },
+            "taue": {
+                "type": float,
+                "label": "τe (ms):",
+                "tooltip": "Excitatory Time Constant.\nTypical: 5 ms",
+                "default": 5.0,
+                "min": 1.0,
+                "max": 20.0,
+                "step": 0.5,
+            },
+            "taui": {
+                "type": float,
+                "label": "τi (ms):",
+                "tooltip": "Inhibitory Time Constant.\nTypical: 10 ms",
+                "default": 10.0,
+                "min": 1.0,
+                "max": 50.0,
+                "step": 0.5,
+            },
+        },
+        "presets": {
+            "none": {"display_name": "Default", "values": {}},
+            "coba_benchmark": {
+                "display_name": "COBA Benchmark",
+                "values": {
+                    "Cm": 200.0,  # 200 pF
+                    "gl": 10.0,   # 10 nS (tau_m = 20ms)
+                    "El": -60.0,  # Resting potential
+                    "v_threshold": -50.0,
+                    "v_reset": -60.0,
+                    "refractory": 5.0,
+                    "Ee": 0.0,    # Excitatory reversal
+                    "Ei": -80.0,  # Inhibitory reversal
+                    "taue": 5.0,
+                    "taui": 10.0,
+                },
+                "sim_params": {
+                    "sim_time": 1000,
+                    "input_current": 0.0, # No current injection
+                    "num_neurons": 4000,  # Standard: 3200 Ex, 800 In
+                },
+                 "noise": {"enabled": False},
+                 "network": {
+                    "enabled": True,
+                    "network_topology": "coba_benchmark", 
+                    "syn_prob": 0.02,
                 },
             },
         },
@@ -271,12 +395,12 @@ NEURON_MODELS_CONFIG = {
                     "current_start": 100,
                     "current_duration": 300,
                 },
-                "noise_options": {
-                    "noise_enabled": True,
-                    "noise_intensity": 1.0,
-                    "noise_method": "additive",
+                "noise": {
+                    "enabled": True,
+                    "intensity": 1.0,
+                    "method": "additive",
                 },
-                "network_options": {"synapse_enabled": False},
+                "network": {"enabled": False},
             },
             "chattering": {
                 "display_name": "Chattering",
@@ -293,12 +417,12 @@ NEURON_MODELS_CONFIG = {
                     "current_start": 100,
                     "current_duration": 300,
                 },
-                "noise_options": {
-                    "noise_enabled": True,
-                    "noise_intensity": 1.0,
-                    "noise_method": "additive",
+                "noise": {
+                    "enabled": True,
+                    "intensity": 1.0,
+                    "method": "additive",
                 },
-                "network_options": {"synapse_enabled": False},
+                "network": {"enabled": False},
             },
             "fast_spiking": {
                 "display_name": "Fast Spiking",
@@ -315,12 +439,12 @@ NEURON_MODELS_CONFIG = {
                     "current_start": 100,
                     "current_duration": 300,
                 },
-                "noise_options": {
-                    "noise_enabled": True,
-                    "noise_intensity": 0.5,
-                    "noise_method": "additive",
+                "noise": {
+                    "enabled": True,
+                    "intensity": 0.5,
+                    "method": "additive",
                 },
-                "network_options": {"synapse_enabled": False},
+                "network": {"enabled": False},
             },
             "intrinsically_bursting": {
                 "display_name": "Intrinsically Bursting",
@@ -337,12 +461,12 @@ NEURON_MODELS_CONFIG = {
                     "current_start": 100,
                     "current_duration": 300,
                 },
-                "noise_options": {
-                    "noise_enabled": True,
-                    "noise_intensity": 0.8,
-                    "noise_method": "additive",
+                "noise": {
+                    "enabled": True,
+                    "intensity": 0.8,
+                    "method": "additive",
                 },
-                "network_options": {"synapse_enabled": False},
+                "network": {"enabled": False},
             },
             "network": {
                 "display_name": "Small Network",
@@ -354,13 +478,13 @@ NEURON_MODELS_CONFIG = {
                     "current_start": 100,
                     "current_duration": 800,
                 },
-                "noise_options": {
-                    "noise_enabled": True,
-                    "noise_intensity": 1.0,
-                    "noise_method": "additive",
+                "noise": {
+                    "enabled": True,
+                    "intensity": 1.0,
+                    "method": "additive",
                 },
-                "network_options": {
-                    "synapse_enabled": True,
+                "network": {
+                    "enabled": True,
                     "topology_type": "random",
                     "synaptic_weight": 15.0,
                     "syn_prob": 0.1,
@@ -381,12 +505,12 @@ NEURON_MODELS_CONFIG = {
                     "current_start": 100,
                     "current_duration": 300,
                 },
-                "noise_options": {
-                    "noise_enabled": True,
-                    "noise_intensity": 0.5,
-                    "noise_method": "additive",
+                "noise": {
+                    "enabled": True,
+                    "intensity": 0.5,
+                    "method": "additive",
                 },
-                "network_options": {"synapse_enabled": False},
+                "network": {"enabled": False},
             },
             "resonator": {
                 "display_name": "Resonator",
@@ -403,12 +527,12 @@ NEURON_MODELS_CONFIG = {
                     "current_start": 100,
                     "current_duration": 300,
                 },
-                "noise_options": {
-                    "noise_enabled": True,
-                    "noise_intensity": 0.5,
-                    "noise_method": "additive",
+                "noise": {
+                    "enabled": True,
+                    "intensity": 0.5,
+                    "method": "additive",
                 },
-                "network_options": {"synapse_enabled": False},
+                "network": {"enabled": False},
             },
             "mixed_mode": {
                 "display_name": "Mixed Mode",
@@ -425,12 +549,12 @@ NEURON_MODELS_CONFIG = {
                     "current_start": 100,
                     "current_duration": 300,
                 },
-                "noise_options": {
-                    "noise_enabled": True,
-                    "noise_intensity": 0.8,
-                    "noise_method": "additive",
+                "noise": {
+                    "enabled": True,
+                    "intensity": 0.8,
+                    "method": "additive",
                 },
-                "network_options": {"synapse_enabled": False},
+                "network": {"enabled": False},
             },
         },
     },
@@ -531,12 +655,12 @@ NEURON_MODELS_CONFIG = {
                     "current_start": 100,
                     "current_duration": 300,
                 },
-                "noise_options": {
-                    "noise_enabled": True,
-                    "noise_intensity": 50.0,  # Noise in pA
-                    "noise_method": "additive",
+                "noise": {
+                    "enabled": True,
+                    "intensity": 50.0,  # Noise in pA
+                    "method": "additive",
                 },
-                "network_options": {"synapse_enabled": False},
+                "network": {"enabled": False},
             },
             "bursting": {
                 "display_name": "Intrinsic Bursting",
@@ -557,12 +681,12 @@ NEURON_MODELS_CONFIG = {
                     "current_start": 100,
                     "current_duration": 300,
                 },
-                "noise_options": {
-                    "noise_enabled": True,
-                    "noise_intensity": 40.0,
-                    "noise_method": "additive",
+                "noise": {
+                    "enabled": True,
+                    "intensity": 40.0,
+                    "method": "additive",
                 },
-                "network_options": {"synapse_enabled": False},
+                "network": {"enabled": False},
             },
             "fast_spiking": {
                 "display_name": "Fast Spiking",
@@ -583,12 +707,12 @@ NEURON_MODELS_CONFIG = {
                     "current_start": 100,
                     "current_duration": 300,
                 },
-                "noise_options": {
-                    "noise_enabled": True,
-                    "noise_intensity": 30.0,
-                    "noise_method": "additive",
+                "noise": {
+                    "enabled": True,
+                    "intensity": 30.0,
+                    "method": "additive",
                 },
-                "network_options": {"synapse_enabled": False},
+                "network": {"enabled": False},
             },
             "delayed_spiking": {
                 "display_name": "Delayed Spiking",
@@ -609,12 +733,12 @@ NEURON_MODELS_CONFIG = {
                     "current_start": 200,
                     "current_duration": 600,
                 },
-                "noise_options": {
-                    "noise_enabled": True,
-                    "noise_intensity": 20.0,
-                    "noise_method": "additive",
+                "noise": {
+                    "enabled": True,
+                    "intensity": 20.0,
+                    "method": "additive",
                 },
-                "network_options": {"synapse_enabled": False},
+                "network": {"enabled": False},
             },
             "low_threshold": {
                 "display_name": "Low-threshold Spiking",
@@ -635,12 +759,12 @@ NEURON_MODELS_CONFIG = {
                     "current_start": 100,
                     "current_duration": 300,
                 },
-                "noise_options": {
-                    "noise_enabled": True,
-                    "noise_intensity": 15.0,
-                    "noise_method": "additive",
+                "noise": {
+                    "enabled": True,
+                    "intensity": 15.0,
+                    "method": "additive",
                 },
-                "network_options": {"synapse_enabled": False},
+                "network": {"enabled": False},
             },
             "tonic_adapting": {
                 "display_name": "Tonic Spiking with Adaptation",
@@ -661,12 +785,12 @@ NEURON_MODELS_CONFIG = {
                     "current_start": 100,
                     "current_duration": 800,
                 },
-                "noise_options": {
-                    "noise_enabled": True,
-                    "noise_intensity": 40.0,
-                    "noise_method": "additive",
+                "noise": {
+                    "enabled": True,
+                    "intensity": 40.0,
+                    "method": "additive",
                 },
-                "network_options": {"synapse_enabled": False},
+                "network": {"enabled": False},
             },
             "irregular": {
                 "display_name": "Irregular Spiking",
@@ -687,12 +811,12 @@ NEURON_MODELS_CONFIG = {
                     "current_start": 100,
                     "current_duration": 800,
                 },
-                "noise_options": {
-                    "noise_enabled": True,
-                    "noise_intensity": 60.0,  # Higher noise for irregularity
-                    "noise_method": "additive",
+                "noise": {
+                    "enabled": True,
+                    "intensity": 60.0,  # Higher noise for irregularity
+                    "method": "additive",
                 },
-                "network_options": {"synapse_enabled": False},
+                "network": {"enabled": False},
             },
         },
     },
@@ -811,8 +935,8 @@ NEURON_MODELS_CONFIG = {
                     "current_start": 10,
                     "current_duration": 50,
                 },
-                "noise_options": {"noise_enabled": False},
-                "network_options": {"synapse_enabled": False},
+                "noise": {"enabled": False},
+                "network": {"enabled": False},
             },
             "mammalian_neuron": {
                 "display_name": "Mammalian Neuron (37°C)",
@@ -833,12 +957,12 @@ NEURON_MODELS_CONFIG = {
                     "current_start": 20,
                     "current_duration": 30,
                 },
-                "noise_options": {
-                    "noise_enabled": True,
-                    "noise_intensity": 0.5,
-                    "noise_method": "additive",
+                "noise": {
+                    "enabled": True,
+                    "intensity": 0.5,
+                    "method": "additive",
                 },
-                "network_options": {"synapse_enabled": False},
+                "network": {"enabled": False},
             },
             "cortical_pyramidal": {
                 "display_name": "Cortical Pyramidal Cell",
@@ -859,15 +983,16 @@ NEURON_MODELS_CONFIG = {
                     "current_start": 50,
                     "current_duration": 100,
                 },
-                "noise_options": {
-                    "noise_enabled": True,
-                    "noise_intensity": 0.3,
-                    "noise_method": "additive",
+                "noise": {
+                    "enabled": True,
+                    "intensity": 0.3,
+                    "method": "additive",
                 },
-                "network_options": {"synapse_enabled": False},
+                "network": {"enabled": False},
             },
         },
     },
+
     "custom": {
         "display_name": "Custom Equations",
         "params": {

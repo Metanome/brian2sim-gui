@@ -64,3 +64,8 @@ class SimParamsManager(QObject):
     def get_sim_params_config(self):
         """Get simulation parameters configuration data for config manager."""
         return self.get_sim_params()
+
+    def reset_to_defaults(self):
+        """Reset simulation parameters to their default values."""
+        if hasattr(self.main_window, "sim_params_form_generator"):
+            self.main_window.sim_params_form_generator.reset_to_defaults()

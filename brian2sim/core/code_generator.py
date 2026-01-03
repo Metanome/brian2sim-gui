@@ -73,12 +73,24 @@ class CodeGenerator:
         noise_params = params.get("noise", {})
         network_params = params.get("network", {})
         advanced_params = params.get("advanced_network", {})
+        
+        # Advanced features
+        synaptic_receptors_params = params.get("synaptic_receptors", {})
+        short_term_plasticity_params = params.get("short_term_plasticity", {})
+        calcium_dynamics_params = params.get("calcium_dynamics", {})
+        homeostatic_params = params.get("homeostatic_plasticity", {})
+        neuromodulation_params = params.get("neuromodulation", {})
+        multicompartment_params = params.get("multicompartment", {})
 
         # Add parameter comments
         lines.extend(self._generate_parameter_comments(params))
 
         # Build neurons
-        lines.extend(self._generate_neuron_code(sim_params, neuron_params))
+        # Check if multicompartment
+        if multicompartment_params.get("enabled", False):
+            lines.extend(self._generate_multicompartment_code(sim_params, multicompartment_params, neuron_params, calcium_dynamics_params))
+        else:
+            lines.extend(self._generate_neuron_code(sim_params, neuron_params))
 
         # Add input current
         lines.extend(self._generate_input_current_code(sim_params))
@@ -86,10 +98,28 @@ class CodeGenerator:
         # Add noise if enabled
         if noise_params.get("enabled", False):
             lines.extend(self._generate_noise_code(noise_params))
+            
+        # Add input patterns
+        if params.get("input_patterns"):
+            lines.extend(self._generate_input_patterns_code(params.get("input_patterns")))
 
         # Add network connections if enabled
-        if network_params.get("synaptic_connections", False):
-            lines.extend(self._generate_network_code(network_params, advanced_params, sim_params))
+        # Covers simple synapes, receptors, and STP
+        if network_params.get("enabled", False) or network_params.get("synaptic_connections", False):
+            lines.extend(self._generate_synapses_code(
+                network_params, 
+                advanced_params, 
+                synaptic_receptors_params, 
+                short_term_plasticity_params, 
+                calcium_dynamics_params,
+                sim_params
+            ))
+
+        # Add gap junctions
+        lines.extend(self._generate_gap_junctions_code(params))
+        
+        # Add plasticity (Homeostasis & Neuromodulation)
+        lines.extend(self._generate_plasticity_code(homeostatic_params, neuromodulation_params))
 
         # Setup monitors
         lines.extend(self._generate_monitors_code(sim_params))
@@ -128,12 +158,17 @@ class CodeGenerator:
 
         num_neurons = sim_params.get("num_neurons", 1)
         model_type = neuron_params.get("model_key", "lif")
+        
+        # Support nested parameters check
+        params = neuron_params.get("parameters", neuron_params)
 
         if model_type == "lif":
-            threshold = neuron_params.get("lif_threshold", -50)
-            reset = neuron_params.get("lif_reset", -70)
-            tau = neuron_params.get("tau_m", 10)
-            resistance = neuron_params.get("resistance", 100)
+            threshold = sim_params.get("v_threshold", -50)
+            reset = sim_params.get("v_reset", -70)
+            tau = params.get("tau_m", 20)
+            v_rest = params.get("v_rest", -70)
+            resistance = params.get("resistance", 100)
+            refractory = params.get("refractory", 2.0)
 
             lines.extend(
                 [
@@ -141,16 +176,71 @@ class CodeGenerator:
                     f"    R = {resistance} * Mohm",
                     f"    v_threshold = {threshold} * mV",
                     f"    v_reset = {reset} * mV",
+                    f"    v_rest = {v_rest} * mV",
+                    f"    refractory_period = {refractory} * ms",
                     "    ",
                     '    neuron_eqs = """',
-                    "    dv/dt = (-(v - V_rest) + R * I) / tau : volt",
+                    "    dv/dt = (-(v - v_rest) + R * (I + I_gap)) / tau_m : volt (unless refractory)",
+                    "    I : amp",
+                    "    I_gap : amp",
+                    "    activity : Hz  # For plasticity",
+                    '    """',
+                    "    ",
+                    f"    neurons = NeuronGroup({num_neurons}, neuron_eqs,",
+                    '                          threshold="v > v_threshold",',
+                    '                          reset="v = v_reset; activity += 1*Hz",',
+                    "                          refractory=refractory_period,",
+                    '                          method="euler")',
+                    "    neurons.v = v_reset",
+                    "    neurons.I_gap = 0 * amp",
+                    "    ",
+                ]
+            )
+
+        elif model_type == "lif_coba":
+            # Conductance-Based LIF
+            Cm = params.get("Cm", 200)
+            gl = params.get("gl", 10)
+            El = params.get("El", -60)
+            threshold = params.get("v_threshold", -50)
+            reset = params.get("v_reset", -60)
+            refractory = params.get("refractory", 5.0)
+            
+            Ee = params.get("Ee", 0)
+            Ei = params.get("Ei", -80)
+            taue = params.get("taue", 5.0)
+            taui = params.get("taui", 10.0)
+
+            lines.extend(
+                [
+                    f"    Cm = {Cm} * pF",
+                    f"    gl = {gl} * nS",
+                    f"    El = {El} * mV",
+                    f"    v_threshold = {threshold} * mV",
+                    f"    v_reset = {reset} * mV",
+                    f"    refractory_period = {refractory} * ms",
+                    f"    Ee = {Ee} * mV",
+                    f"    Ei = {Ei} * mV",
+                    f"    taue = {taue} * ms",
+                    f"    taui = {taui} * ms",
+                    "    ",
+                    '    neuron_eqs = """',
+                    "    dv/dt = (gl * (El - v) + ge * (Ee - v) + gi * (Ei - v) + I) / Cm : volt (unless refractory)",
+                    "    dge/dt = -ge / taue : siemens",
+                    "    dgi/dt = -gi / taui : siemens",
                     "    I : amp",
                     '    """',
                     "    ",
                     f"    neurons = NeuronGroup({num_neurons}, neuron_eqs,",
                     '                          threshold="v > v_threshold",',
-                    '                          reset="v = v_reset")',
+                    '                          reset="v = v_reset",',
+                    "                          refractory=refractory_period,",
+                    '                          method="euler")',
                     "    neurons.v = v_reset",
+                    # Initialize conductances to 0
+                    "    neurons.ge = 0 * nS",
+                    "    neurons.gi = 0 * nS",
+                    "    neurons.I = 0 * amp",
                     "    ",
                 ]
             )
@@ -170,16 +260,19 @@ class CodeGenerator:
                     f"    d = {d}",
                     "    ",
                     '    neuron_eqs = """',
-                    "    dv/dt = (0.04*v**2 + 5*v + 140 - u + I)/ms : 1",
+                    "    dv/dt = (0.04*v**2 + 5*v + 140 - u + I + I_gap)/ms : 1",
                     "    du/dt = (a*(b*v - u))/ms : 1",
                     "    I : 1",
+                    "    I_gap : 1",
                     '    """',
                     "    ",
                     f"    neurons = NeuronGroup({num_neurons}, neuron_eqs,",
                     '                          threshold="v >= 30",',
-                    '                          reset="v = c; u += d")',
+                    '                          reset="v = c; u += d",',
+                    '                          method="euler")',
                     f"    neurons.v = {c}",
                     f"    neurons.u = {b} * {c}",
+                    "    neurons.I_gap = 0",
                     "    ",
                 ]
             )
@@ -192,9 +285,12 @@ class CodeGenerator:
             EL = parameters.get("EL", -70)
             VT = parameters.get("VT", -50)
             delT = parameters.get("delT", 2)
-            a = parameters.get("a", 2)
+            a_param = parameters.get("a", 2)
             tauw = parameters.get("tauw", 30)
-            b = parameters.get("b", 60)
+            b_param = parameters.get("b", 60)
+            
+            # v_reset from sim_params or default to EL
+            vr_val = sim_params.get("v_reset", EL)
 
             lines.extend(
                 [
@@ -203,21 +299,25 @@ class CodeGenerator:
                     f"    EL = {EL} * mV",
                     f"    VT = {VT} * mV",
                     f"    delT = {delT} * mV",
-                    f"    a = {a} * nS",
+                    f"    a = {a_param} * nS",
                     f"    tauw = {tauw} * ms",
-                    f"    b = {b} * pA",
+                    f"    b = {b_param} * pA",
+                    f"    v_reset = {vr_val} * mV",
                     "    ",
                     '    neuron_eqs = """',
-                    "    dv/dt = (gL*(EL - v) + gL*delT*exp((v - VT)/delT) - w + I)/C : volt",
+                    "    dv/dt = (gL*(EL - v) + gL*delT*exp((v - VT)/delT) - w + I + I_gap)/C : volt",
                     "    dw/dt = (a*(v - EL) - w)/tauw : amp",
                     "    I : amp",
+                    "    I_gap : amp",
                     '    """',
                     "    ",
                     f"    neurons = NeuronGroup({num_neurons}, neuron_eqs,",
                     '                          threshold="v > VT + 5*delT",',
-                    '                          reset="v = EL; w += b")',
+                    '                          reset="v = v_reset; w += b",',
+                    '                          method="euler")',
                     "    neurons.v = EL",
                     "    neurons.w = 0 * pA",
+                    "    neurons.I_gap = 0 * amp",
                     "    ",
                 ]
             )
@@ -226,10 +326,15 @@ class CodeGenerator:
             lines.extend(
                 [
                     "    # Default LIF model",
-                    '    neuron_eqs = "dv/dt = (-v + R*I)/tau : volt"',
+                    '    neuron_eqs = """',
+                    "    dv/dt = (-v + R*I)/tau : volt",
+                    "    I : amp",
+                    "    I_gap : amp",
+                    '    """',
                     f"    neurons = NeuronGroup({num_neurons}, neuron_eqs,",
                     '                          threshold="v > -50*mV",',
-                    '                          reset="v = -70*mV")',
+                    '                          reset="v = -70*mV",',
+                    '                          method="euler")',
                     "    neurons.v = -70 * mV",
                     "    ",
                 ]
@@ -288,119 +393,255 @@ class CodeGenerator:
                     "    ",
                 ]
             )
-
-        return lines
-
-    def _generate_network_code(self, network_params, advanced_params, sim_params):
-        """Generate synaptic network code."""
-        lines = ["    # Create synaptic connections"]
-
-        if sim_params.get("num_neurons", 1) < 2:
-            lines.extend(
-                [
-                    "    # Note: Network connections require at least 2 neurons",
-                    "    # Skipping synapse creation",
-                    "    ",
-                ]
-            )
             return lines
 
-        synaptic_weight = network_params.get("synaptic_weight", 0.1)
-        topology = network_params.get("network_topology", "all_to_all")
+    def _generate_synapses_code(self, network_params, advanced_params, receptors_params, stp_params, ca_params, sim_params):
+        """Generate synaptic connection code, supporting advanced features."""
+        lines = ["    # Synaptic connections"]
+        
+        use_receptors = receptors_params.get("enabled", False)
+        use_stp = stp_params.get("enabled", False)
+        stdp_params = advanced_params.get("stdp", {})
+        use_stdp = stdp_params.get("enabled", False)
 
-        lines.extend(
-            [
-                "    # Synaptic connections",
-                f"    w_syn = {synaptic_weight} * nA",
-                '    synapses = Synapses(neurons, neurons, "w : amp", on_pre="I += w")',
-                "    ",
-            ]
-        )
-
-        # Connection topology
-        if topology == "all_to_all":
-            allow_self = network_params.get("allow_self_connections", False)
-            if allow_self:
-                lines.append("    synapses.connect()  # All-to-all including self-connections")
+        if not (use_receptors or use_stp or use_stdp):
+            # --- SIMPLE SYNAPSES ---
+            weight = network_params.get("weight", 0.5)
+            use_reversals = advanced_params and ("exc_reversal" in advanced_params or "inh_reversal" in advanced_params)
+            
+            if use_reversals:
+                v_norm = advanced_params.get("driving_force_norm", 70.0)
+                exc_rev = advanced_params.get("exc_reversal", 0.0)
+                inh_rev = advanced_params.get("inh_reversal", -80.0)
+                
+                lines.extend([
+                    f"    v_norm = {v_norm} * mV",
+                    '    syn_model = """',
+                    "    w : siemens",
+                    "    E_rev : volt",
+                    '    """',
+                    '    syn_on_pre = "v_post += (w/nS) * ((E_rev - v_post) / v_norm) * mV"',
+                    "    synapses = Synapses(neurons, neurons, model=syn_model, on_pre=syn_on_pre)",
+                    f"    synapses.w = {weight} * nS",
+                    f"    synapses.E_rev = {exc_rev} * mV  # Default to excitatory",
+                ])
             else:
-                lines.append(
-                    '    synapses.connect(condition="i != j")  # All-to-all excluding self'
-                )
-        elif topology == "one_to_one":
-            lines.append('    synapses.connect(j="i+1", skip_if_invalid=True)  # One-to-one chain')
-        elif topology == "random":
-            prob = network_params.get("connection_probability", 0.3)
-            lines.append(f"    synapses.connect(p={prob})  # Random connections")
+                lines.extend([
+                    f"    w_syn = {weight} * nS",
+                    '    synapses = Synapses(neurons, neurons, "w : siemens", on_pre="v_post += w/nS * mV")',
+                    "    synapses.w = w_syn",
+                ])
+                
+        else:
+            # --- ADVANCED SYNAPSES (Receptors, STP, STDP) ---
+            model_parts = ["w : siemens"]
+            on_pre_parts = []
+            on_post_parts = []
+            
+            # 1. Receptors
+            if use_receptors:
+                if receptors_params.get("ampa_enabled"):
+                    tau = receptors_params.get("ampa_tau_decay", 2.0)
+                    rev = receptors_params.get("ampa_reversal", 0.0)
+                    ratio = receptors_params.get("ampa_weight_ratio", 1.0)
+                    lines.append(f"    tau_ampa = {tau}*ms; E_ampa = {rev}*mV; w_ampa_R = {ratio}")
+                    model_parts.append("dg_ampa/dt = -g_ampa / tau_ampa : siemens")
+                    model_parts.append("I_ampa = g_ampa * (E_ampa - v_post) : amp")
+                    on_pre_parts.append("g_ampa += w * w_ampa_R")
 
-        lines.extend(
-            [
-                "    synapses.w = w_syn",
-                "    ",
-            ]
-        )
+                if receptors_params.get("nmda_enabled"):
+                    tau_r = receptors_params.get("nmda_tau_rise", 2.0)
+                    tau_d = receptors_params.get("nmda_tau_decay", 100.0)
+                    rev = receptors_params.get("nmda_reversal", 0.0)
+                    mg = receptors_params.get("nmda_mg_concentration", 1.0)
+                    ratio = receptors_params.get("nmda_weight_ratio", 0.5)
+                    lines.append(f"    tau_nmda_r={tau_r}*ms; tau_nmda_d={tau_d}*ms; E_nmda={rev}*mV; mg={mg}; w_nmda_R={ratio}")
+                    model_parts.append("dg_nmda/dt = (s_nmda - g_nmda)/tau_nmda_d : siemens")
+                    model_parts.append("ds_nmda/dt = -s_nmda/tau_nmda_r : siemens")
+                    model_parts.append("B_mg = 1.0 / (1.0 + (mg/3.57) * exp(-0.062 * v_post/mV)) : 1")
+                    model_parts.append("I_nmda = g_nmda * B_mg * (E_nmda - v_post) : amp")
+                    on_pre_parts.append("s_nmda += w * w_nmda_R")
 
-        # Advanced features
-        if advanced_params:
-            lines.extend(self._generate_advanced_features_code(advanced_params))
+                if receptors_params.get("gaba_a_enabled"):
+                    tau_r = receptors_params.get("gaba_a_tau_rise", 0.5)
+                    tau_d = receptors_params.get("gaba_a_tau_decay", 6.0)
+                    rev = receptors_params.get("gaba_a_reversal", -70.0)
+                    ratio = receptors_params.get("gaba_a_weight_ratio", 1.5)
+                    lines.append(f"    tau_gaba_a_r={tau_r}*ms; tau_gaba_a_d={tau_d}*ms; E_gaba_a={rev}*mV; w_gaba_a_R={ratio}")
+                    model_parts.append("dg_gaba_a/dt = (s_gaba_a - g_gaba_a)/tau_gaba_a_d : siemens")
+                    model_parts.append("ds_gaba_a/dt = -s_gaba_a/tau_gaba_a_r : siemens")
+                    model_parts.append("I_gaba_a = g_gaba_a * (E_gaba_a - v_post) : amp")
+                    on_pre_parts.append("s_gaba_a += w * w_gaba_a_R")
+
+                if receptors_params.get("gaba_b_enabled"):
+                    tau_r = receptors_params.get("gaba_b_tau_rise", 50.0)
+                    tau_d = receptors_params.get("gaba_b_tau_decay", 200.0)
+                    rev = receptors_params.get("gaba_b_reversal", -90.0)
+                    ratio = receptors_params.get("gaba_b_weight_ratio", 0.5)
+                    lines.append(f"    tau_gaba_b_r={tau_r}*ms; tau_gaba_b_d={tau_d}*ms; E_gaba_b={rev}*mV; w_gaba_b_R={ratio}")
+                    model_parts.append("dg_gaba_b/dt = (s_gaba_b - g_gaba_b)/tau_gaba_b_d : siemens")
+                    model_parts.append("ds_gaba_b/dt = -s_gaba_b/tau_gaba_b_r : siemens")
+                    model_parts.append("I_gaba_b = g_gaba_b * (E_gaba_b - v_post) : amp")
+                    on_pre_parts.append("s_gaba_b += w * w_gaba_b_R")
+                
+                # Sum inputs into I_post (targeting neurons.I)
+                currents = [f"I_{x}" for x in ["ampa","nmda","gaba_a","gaba_b"] if receptors_params.get(f"{x}_enabled")]
+                if currents:
+                    model_parts.append(f"I_syn = {' + '.join(currents)} : amp")
+                    model_parts.append("I_post = I_syn : amp (summed)")
+
+            # 2. STP
+            if use_stp:
+                 U = stp_params.get("tm_U", 0.5)
+                 tau_d = stp_params.get("tm_tau_d", 800.0)
+                 tau_f = stp_params.get("tm_tau_f", 50.0)
+                 lines.extend([f"    tau_stp_d={tau_d}*ms; tau_stp_f={tau_f}*ms; U_stp={U}"])
+                 model_parts.append("dx/dt = (1 - x)/tau_stp_d : 1 (event-driven)")
+                 model_parts.append("du/dt = (U_stp - u)/tau_stp_f : 1 (event-driven)")
+                 model_parts.append("r : 1") 
+                 stp_pre = "u += U_stp * (1 - u); r = u * x; x -= r; "
+                 on_pre_parts.insert(0, stp_pre)
+                 on_pre_parts = [p.replace("w *", "w * r *") if "w *" in p else p for p in on_pre_parts]
+
+            # 3. STDP
+            if use_stdp:
+                 lines.append(f"    tau_pre=20*ms; tau_post=20*ms; A_plus=0.01; A_minus=0.0105; w_max=1.0*nS")
+                 model_parts.append("dapre/dt = -apre/tau_pre : 1 (event-driven)")
+                 model_parts.append("dapost/dt = -apost/tau_post : 1 (event-driven)")
+                 on_pre_parts.append("apre += A_plus; w = clip(w + apost, 0, w_max)")
+                 on_post_parts.append("apost -= A_minus; w = clip(w + apre, 0, w_max)")
+
+            eqs_str = "\\n            ".join(model_parts)
+            pre_str = "; ".join(on_pre_parts)
+            post_str = "; ".join(on_post_parts)
+
+            lines.extend([
+                '    syn_model = """',
+                f'    {eqs_str}',
+                '    """',
+                f'    syn_on_pre = "{pre_str}"',
+                f'    syn_on_post = "{post_str}"',
+                "    synapses = Synapses(neurons, neurons, model=syn_model, on_pre=syn_on_pre, on_post=syn_on_post)",
+                "    synapses.w = 0.5 * nS",
+            ])
+            
+            if use_stp:
+                 lines.append("    synapses.x = 1.0; synapses.u = U_stp")
+
+        # Topology
+        topology = network_params.get("network_topology", "random")
+        lines.append(f"    # Topology: {topology}")
+        params = self._extract_topology_params(network_params, advanced_params)
+        
+        if topology == "random":
+             lines.append(f"    synapses.connect(p=params['connection_probability'])")
+        elif topology == "all_to_all":
+             lines.append("    synapses.connect(condition='i != j')")
+        else:
+             lines.append(f"    synapses.connect(p=params['connection_probability'])")
+
+        lines.append("    ")
+        return lines
+
+    def _extract_topology_params(self, network_params, advanced_params):
+        return {
+            "connection_probability": network_params.get("connection_probability", 0.1),
+            "allow_self_connections": network_params.get("allow_self_connections", False),
+        }
+
+    def _generate_plasticity_code(self, homeo_params, neuro_params):
+        """Generate plasticity code."""
+        lines = ["    # Plasticity"]
+        if homeo_params.get("enabled", False):
+            lines.append("    # Homeostatic Mechanisms (Activity & Scaling)")
+            
+            if homeo_params.get("activity_detection", True):
+                lines.append(f"    tau_act = {homeo_params.get('tau_activity', 1000.0)}*ms")
+                lines.append(f"    target = {homeo_params.get('target_rate', 5.0)}*Hz")
+                lines.append('    neurons.run_regularly("activity = activity * exp(-dt/tau_act); activity_error = activity - target", dt=10*ms)')
+                
+            if homeo_params.get("synaptic_scaling", False):
+                lines.append("    # Synaptic Scaling")
+                lines.append('    if "synapses" in locals():')
+                lines.append('        synapses.run_regularly("scaling_factor = 1 + 0.001 * (target - activity_post)/Hz; w = clip(w * scaling_factor, 0, 100*nS)", dt=100*ms)')
 
         return lines
 
-    def _generate_advanced_features_code(self, advanced_params):
-        """Generate code for advanced network features."""
-        lines = []
+    def _generate_input_patterns_code(self, input_params):
+        """Generate input patterns code."""
+        return ["    # Input patterns not fully implemented in generation"]
 
-        # Dale's principle
-        if advanced_params.get("dales_principle", {}).get("enabled", False):
-            dales_config = advanced_params["dales_principle"]
-            ratio = dales_config.get("inhibitory_ratio", 0.2)
-            lines.extend(
-                [
-                    "    # Dale's principle: separate excitatory and inhibitory neurons",
-                    f"    inhibitory_ratio = {ratio}",
-                    "    n_inhibitory = int(len(neurons) * inhibitory_ratio)",
-                    "    if n_inhibitory > 0:",
-                    "        # Make connections from last n_inhibitory neurons inhibitory",
-                    "        synapses.w[synapses.i >= (len(neurons) - n_inhibitory)] *= -1",
-                    "    ",
-                ]
-            )
+    def _generate_multicompartment_code(self, sim_params, multicomp_params, neuron_params, ca_params):
+        """Generate multicompartment code (Fallback)."""
+        lines = ["    # Multicompartment model (Fallback to Point Neuron)"]
+        lines.append('    print("Warning: SpatialNeuron code generation not supported. Using Point Neurons.")')
+        lines.extend(self._generate_neuron_code(sim_params, neuron_params))
+        return lines
 
-        # Synaptic delays
-        if advanced_params.get("synaptic_delays", {}).get("enabled", False):
-            delay_config = advanced_params["synaptic_delays"]
-            delay_type = delay_config.get("delay_type", "fixed")
+    def _generate_gap_junctions_code(self, params):
+        """Generate gap junctions code."""
+        gap_params = params.get("gap_junctions", {})
+        if not gap_params.get("enabled", False):
+            return []
 
-            if delay_type == "fixed":
-                delay = delay_config.get("fixed_delay", 1)
-                lines.extend(
-                    [
-                        "    # Fixed synaptic delays",
-                        f"    synapses.delay = {delay} * ms",
-                        "    ",
-                    ]
-                )
-            elif delay_type == "uniform":
-                min_delay = delay_config.get("min_delay", 0.5)
-                max_delay = delay_config.get("max_delay", 2)
-                lines.extend(
-                    [
-                        "    # Uniform random synaptic delays",
-                        f'    synapses.delay = "({min_delay} + ({max_delay} - {min_delay}) * rand()) * ms"',
-                        "    ",
-                    ]
-                )
-
-        # STDP (simplified)
-        if advanced_params.get("stdp", {}).get("enabled", False):
-            lines.extend(
-                [
-                    "    # STDP (simplified implementation)",
-                    "    # Note: Full STDP implementation would require more complex synaptic equations",
-                    "    # This is a placeholder for demonstration",
-                    "    ",
-                ]
-            )
-
+        lines = ["    # Gap Junctions"]
+        
+        conductance = gap_params.get("conductance", 0.1)
+        gj_type = gap_params.get("junction_type", "symmetric")
+        voltage_dep = gap_params.get("voltage_dependence", False)
+        
+        lines.append(f"    g_gap_conductance = {conductance} * nS")
+        
+        # Build model equations string
+        eqs = ["g_gap : siemens"]
+        g_eff_str = "g_gap"
+        
+        if voltage_dep:
+            v_half = gap_params.get("gating_voltage", -40.0)
+            slope = gap_params.get("gating_slope", 10.0)
+            eqs.append(f"g_open = 1 / (1 + exp(-(v_pre - v_post - ({v_half}*mV)) / ({slope}*mV))) : 1")
+            g_eff_str += " * g_open"
+            
+        if gj_type == "rectifying":
+            eqs.append("ratio = int(v_pre > v_post) : 1")
+            g_eff_str += " * ratio"
+            
+        eqs.append(f"g_effective = {g_eff_str} : siemens")
+        eqs.append("I_gap_post = g_effective * (v_pre - v_post) : amp (summed)")
+        
+        eqs_str = "\\n            ".join(eqs)
+        
+        lines.extend([
+            f'    gap_model = """',
+            f'    {eqs_str}',
+            f'    """',
+            "    gap_junctions = Synapses(neurons, neurons, model=gap_model, method='euler')",
+            "    gap_junctions.g_gap = g_gap_conductance",
+            "    ",
+        ])
+        
+        # Connectivity
+        pattern = gap_params.get("spatial_organization", "random")
+        if pattern == "random":
+            prob = gap_params.get("connection_probability", 0.05)
+            lines.append(f"    gap_junctions.connect(condition='i < j', p={prob})")
+            lines.append(f"    gap_junctions.connect(condition='i > j', p={prob})")
+            lines.append("    # Note: Bidirectional random connections created")
+            
+        elif pattern == "nearest_neighbor":
+            k = gap_params.get("num_neighbors", 2)
+            lines.append(f"    # Nearest neighbor connectivity (k={k})")
+            lines.append("    for i in range(len(neurons)):")
+            lines.append(f"        for j in range(1, {k} + 1):")
+            lines.append("            if i + j < len(neurons):")
+            lines.append("                gap_junctions.connect(i=i, j=i+j)")
+            lines.append("                gap_junctions.connect(i=i+j, j=i)")
+            
+        else:
+            # Fallback
+            lines.append("    gap_junctions.connect(condition='i != j', p=0.01) # Fallback to random")
+            
+        lines.append("    ")
         return lines
 
     def _generate_monitors_code(self, sim_params):

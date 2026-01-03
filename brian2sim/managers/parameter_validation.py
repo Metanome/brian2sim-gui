@@ -39,6 +39,11 @@ class ParameterValidator:
             "voltage", -100, 50, "mV", "Membrane potential should be between -100mV and +50mV"
         )
 
+        # Long time constant rules (Must come before generic tau rule)
+        self.add_range_rule("bcm_tau", 0.1, 100000, "ms")
+        self.add_range_rule("smoothing_tau", 0.1, 100000, "ms")
+        self.add_range_rule("desensitization_tau", 0.1, 100000, "ms")
+
         # Time constant rules
         self.add_range_rule(
             "tau", 0.1, 1000, "ms", "Time constants should be between 0.1ms and 1000ms"
@@ -133,15 +138,20 @@ class ParameterValidator:
 
     def _validate_network_consistency(self, params: Dict[str, Any]) -> ValidationResult:
         """Validate network size consistency."""
-        n_exc = params.get("n_excitatory", 0)
-        n_inh = params.get("n_inhibitory", 0)
-        total_neurons = n_exc + n_inh
+        # Check for the actual parameter name used in the config
+        total_neurons = params.get("num_neurons", 0)
+        
+        # Fallback: also check for legacy parameter names
+        if total_neurons == 0:
+            n_exc = params.get("n_excitatory", 0)
+            n_inh = params.get("n_inhibitory", 0)
+            total_neurons = n_exc + n_inh
 
         if total_neurons == 0:
-            return ValidationResult(False, "Network must have at least one neuron")
+            return ValidationResult(False, "Network must have at least one neuron", parameter="Number of Neurons")
 
         if total_neurons > 10000:
-            return ValidationResult(True, "Large networks may be slow to simulate", "warning")
+            return ValidationResult(True, "Large networks may be slow to simulate", "warning", parameter="Number of Neurons")
 
         # Check connection probabilities
         exc_prob = params.get("excitatory_connection_probability", 0)
@@ -149,7 +159,7 @@ class ParameterValidator:
 
         if exc_prob > 0.5 or inh_prob > 0.5:
             return ValidationResult(
-                True, "High connection probabilities may create dense networks", "warning"
+                True, "High connection probabilities may create dense networks", "warning", parameter="Connection Probability"
             )
 
         return ValidationResult(True)
@@ -167,7 +177,7 @@ class ParameterValidator:
             if value < 0 and any(
                 keyword in param_name.lower() for keyword in ["time", "delay", "duration", "rate"]
             ):
-                return ValidationResult(False, f"{param_name} cannot be negative")
+                return ValidationResult(False, f"{param_name} cannot be negative", parameter=param_name)
 
         return ValidationResult(True)
 
@@ -178,9 +188,9 @@ class ParameterValidator:
             try:
                 num_value = float(value)
                 if not (rule["min"] <= num_value <= rule["max"]):
-                    return ValidationResult(False, rule["message"])
+                    return ValidationResult(False, rule["message"], parameter=param_name)
             except (ValueError, TypeError):
-                return ValidationResult(False, f"{param_name} must be a number")
+                return ValidationResult(False, f"{param_name} must be a number", parameter=param_name)
 
         return ValidationResult(True)
 
@@ -274,27 +284,29 @@ class ValidationManager(QObject):
         """Collect parameters from all managers."""
         all_params = {}
 
-        # Collect from each manager that has a get_parameters method
-        managers = [
-            "neuron_models_manager",
-            "sim_params_manager",
-            "noise_options_manager",
-            "network_options_manager",
-            "gap_junctions_manager",
-            "synaptic_receptors_manager",
-            "calcium_dynamics_manager",
-            "short_term_plasticity_manager",
-            "homeostatic_plasticity_manager",
-            "neuromodulation_manager",
-            "multicompartment_manager",
-        ]
+        # Map managers to their parameter getter methods
+        manager_methods = {
+            "neuron_models_manager": "get_neuron_model",
+            "sim_params_manager": "get_sim_params",
+            "noise_manager": "get_config",
+            "input_patterns_manager": "get_input_patterns_config",
+            "network_manager": "get_config",
+            "advanced_network_manager": "get_advanced_network_options",
+            "gap_junctions_manager": "get_parameters",
+            "synaptic_receptors_manager": "get_synaptic_receptors_config",
+            "calcium_dynamics_manager": "get_parameters",
+            "short_term_plasticity_manager": "get_parameters",
+            "homeostatic_plasticity_manager": "get_parameters",
+            "neuromodulation_manager": "get_parameters",
+            "multicompartment_manager": "get_parameters",
+        }
 
-        for manager_name in managers:
+        for manager_name, method_name in manager_methods.items():
             if hasattr(self.main_window, manager_name):
                 manager = getattr(self.main_window, manager_name)
-                if hasattr(manager, "get_parameters"):
+                if hasattr(manager, method_name):
                     try:
-                        params = manager.get_parameters()
+                        params = getattr(manager, method_name)()
                         if isinstance(params, dict):
                             all_params.update(params)
                     except Exception as e:
@@ -316,14 +328,14 @@ class ValidationManager(QObject):
         warnings = [r for r in self.current_errors if r.severity == "warning"]
 
         if errors:
-            error_msg = "\\n".join([r.message for r in errors[:3]])  # Show first 3 errors
+            error_msg = "\n".join([r.message for r in errors[:3]])  # Show first 3 errors
             if len(errors) > 3:
-                error_msg += f"\\n... and {len(errors) - 3} more errors"
+                error_msg += f"\n... and {len(errors) - 3} more errors"
             self.validation_error.emit(error_msg, "error")
         elif warnings:
-            warning_msg = "\\n".join([r.message for r in warnings[:3]])  # Show first 3 warnings
+            warning_msg = "\n".join([r.message for r in warnings[:3]])  # Show first 3 warnings
             if len(warnings) > 3:
-                warning_msg += f"\\n... and {len(warnings) - 3} more warnings"
+                warning_msg += f"\n... and {len(warnings) - 3} more warnings"
             self.validation_error.emit(warning_msg, "warning")
 
     def show_validation_dialog(self) -> bool:
@@ -337,16 +349,16 @@ class ValidationManager(QObject):
 
         dialog_text = ""
         if errors:
-            dialog_text += "ERRORS:\\n" + "\\n".join([f"• {r.message}" for r in errors]) + "\\n\\n"
+            dialog_text += "ERRORS:\n" + "\n".join([f"• {r.message}" for r in errors]) + "\n\n"
         if warnings:
-            dialog_text += "WARNINGS:\\n" + "\\n".join([f"• {r.message}" for r in warnings])
+            dialog_text += "WARNINGS:\n" + "\n".join([f"• {r.message}" for r in warnings])
 
         if errors:
             # Critical errors - must be fixed
             QMessageBox.critical(
                 self.main_window,
                 "Parameter Validation Errors",
-                "The following errors must be fixed before proceeding:\\n\\n" + dialog_text,
+                "The following errors must be fixed before proceeding:\n\n" + dialog_text,
             )
             return False
         else:
@@ -354,9 +366,9 @@ class ValidationManager(QObject):
             reply = QMessageBox.question(
                 self.main_window,
                 "Parameter Validation Warnings",
-                "The following warnings were found:\\n\\n"
+                "The following warnings were found:\n\n"
                 + dialog_text
-                + "\\n\\nDo you want to continue anyway?",
+                + "\n\nDo you want to continue anyway?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             )
             return reply == QMessageBox.StandardButton.Yes

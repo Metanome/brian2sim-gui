@@ -24,13 +24,14 @@ NETWORK_CONFIG = {
         "label": "Network Topology:",
         "type": "combo",
         "default": "random",
-        "options": ["random", "small_world", "scale_free", "regular", "modular"],
+        "options": ["random", "small_world", "scale_free", "regular", "modular", "coba_benchmark"],
         "display_options": [
             "Random (Erdős–Rényi)",
             "Small World (Watts-Strogatz)",
             "Scale-Free (Barabási–Albert)",
             "Regular Lattice",
             "Modular Network",
+            "COBA Benchmark (Vogels & Abbott)",
         ],
         "tooltip": "Network connectivity pattern:\n• Random: Each connection has equal probability\n• Small World: Local clusters with some long-range connections\n• Scale-Free: Few highly connected hubs, many sparsely connected nodes\n• Fully Connected: Every neuron connects to every other",
     },
@@ -44,7 +45,7 @@ NETWORK_CONFIG = {
         "step": 0.01,
         "decimals": 3,
         "tooltip": "Probability of connection between any two neurons. Cortical networks typically have sparse connectivity (0.1-0.2 for local circuits).",
-        "depends_on": {"network_topology": "random"},
+        "depends_on": {"network_topology": ["random", "coba_benchmark"]},
     },
     # Small world parameters
     "topology_k": {

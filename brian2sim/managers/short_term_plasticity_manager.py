@@ -131,3 +131,8 @@ class ShortTermPlasticityManager(QObject):
         if preset_name in presets:
             self.set_parameters(presets[preset_name])
             self.parameters_changed.emit()
+
+    def reset_to_defaults(self):
+        """Reset short-term plasticity to their default values."""
+        if hasattr(self.main_window, "short_term_plasticity_form_generator"):
+            self.main_window.short_term_plasticity_form_generator.reset_to_defaults()

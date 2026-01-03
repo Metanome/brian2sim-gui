@@ -26,10 +26,10 @@ from brian2sim.managers.gap_junctions_manager import GapJunctionsManager
 from brian2sim.managers.homeostatic_plasticity_manager import HomeostaticPlasticityManager
 from brian2sim.managers.input_patterns_manager import InputPatternsManager
 from brian2sim.managers.multicompartment_manager import MulticompartmentManager
-from brian2sim.managers.network_manager import NetworkOptionsManager
+from brian2sim.managers.network_manager import NetworkManager
 from brian2sim.managers.neuromodulation_manager import NeuromodulationManager
 from brian2sim.managers.neuron_models_manager import NeuronModelsManager
-from brian2sim.managers.noise_manager import NoiseOptionsManager
+from brian2sim.managers.noise_manager import NoiseManager
 
 # Managers
 from brian2sim.managers.parameter_validation import ValidationManager
@@ -50,9 +50,9 @@ class MainWindow(QMainWindow):
         self.config_manager = ConfigManager(self)
         self.neuron_models_manager = NeuronModelsManager(self)
         self.sim_params_manager = SimParamsManager(self)
-        self.noise_options_manager = NoiseOptionsManager(self)
+        self.noise_manager = NoiseManager(self)
         self.input_patterns_manager = InputPatternsManager(self)
-        self.network_options_manager = NetworkOptionsManager(self)
+        self.network_manager = NetworkManager(self)
         self.advanced_network_manager = AdvancedNetworkManager(self)
         self.gap_junctions_manager = GapJunctionsManager(self)
         self.neuromodulation_manager = NeuromodulationManager(self)
@@ -137,13 +137,16 @@ class MainWindow(QMainWindow):
 
         # Setup menu bar after UI is initialized
         self.menu_bar_manager.setup_menu_bar()
+        
+        # Sync menu checkboxes with actual tab visibility (after tabs and menu are created)
+        self.menu_bar_manager.sync_tab_checkboxes()
 
         # Connect signals after UI is initialized but before setting initial state
         self.neuron_models_manager.connect_signals()
         self.sim_params_manager.connect_signals()
-        self.noise_options_manager.connect_signals()
+        self.noise_manager.connect_signals()
         self.input_patterns_manager.connect_signals()
-        self.network_options_manager.connect_signals()
+        self.network_manager.connect_signals()
         self.advanced_network_manager.connect_signals()
         self.neuromodulation_manager.connect_signals()
         self.homeostatic_plasticity_manager.connect_signals()
@@ -159,8 +162,8 @@ class MainWindow(QMainWindow):
         for manager_name in [
             "neuron_models_manager",
             "sim_params_manager",
-            "noise_options_manager",
-            "network_options_manager",
+            "noise_manager",
+            "network_manager",
             "gap_junctions_manager",
             "synaptic_receptors_manager",
             "calcium_dynamics_manager",
@@ -380,7 +383,7 @@ class MainWindow(QMainWindow):
                 self.sim_params_manager.load_sim_params(config_data.get("simulation", {}))
 
                 # 3. Load noise options
-                self.noise_options_manager.load_noise_options(config_data.get("noise", {}))
+                self.noise_manager.load_config(config_data.get("noise", {}))
 
                 # 4. Load input patterns
                 self.input_patterns_manager.load_input_patterns_config(
@@ -388,7 +391,7 @@ class MainWindow(QMainWindow):
                 )
 
                 # 5. Load network options
-                self.network_options_manager.load_network_options(config_data.get("network", {}))
+                self.network_manager.load_config(config_data.get("network", {}))
 
                 # 6. Load advanced network options
                 self.advanced_network_manager.load_advanced_network_options(
@@ -431,6 +434,13 @@ class MainWindow(QMainWindow):
                         config_data.get("monitors", {})
                     )
 
+                # Show success message
+                QMessageBox.information(
+                    self,
+                    "Configuration Loaded",
+                    f"Configuration has been successfully loaded from:\n{file_path}"
+                )
+
     def save_configuration(self):
         """Save current configuration to a JSON file."""
         file_path, _ = QFileDialog.getSaveFileName(
@@ -440,9 +450,9 @@ class MainWindow(QMainWindow):
             config_data = {
                 "neuron_model": self.neuron_models_manager.get_neuron_model_config(),
                 "simulation": self.sim_params_manager.get_sim_params_config(),
-                "noise": self.noise_options_manager.get_noise_options_config(),
+                "noise": self.noise_manager.get_config(),
                 "input_patterns": self.input_patterns_manager.get_input_patterns_config(),
-                "network": self.network_options_manager.get_network_options_config(),
+                "network": self.network_manager.get_config(),
                 "advanced_network": self.advanced_network_manager.get_advanced_network_config(),
             }
             # Add advanced module configurations

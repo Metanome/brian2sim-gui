@@ -631,3 +631,18 @@ w = clip(w - A_pre * {A_minus}, {w_min}, {w_max})
     def get_advanced_network_config(self):
         """Get advanced network configuration data for config manager."""
         return self.get_advanced_network_options()
+
+    def reset_to_defaults(self):
+        """Reset all advanced network options to their default values."""
+        # Reset all feature checkboxes to unchecked (disabled by default)
+        feature_checkboxes = [
+            "dales_principle_checkbox",
+            "synaptic_delays_checkbox",
+            "stdp_checkbox",
+            "distance_connectivity_checkbox",
+        ]
+        for checkbox_name in feature_checkboxes:
+            if hasattr(self.main_window, checkbox_name):
+                checkbox = getattr(self.main_window, checkbox_name)
+                if checkbox:
+                    checkbox.setChecked(False)

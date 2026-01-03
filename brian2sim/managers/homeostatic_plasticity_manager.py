@@ -36,6 +36,12 @@ class HomeostaticPlasticityManager(QObject):
         """Called when any homeostatic plasticity parameter changes"""
         self.param_changed.emit()
 
+    def get_parameters(self):
+        """Get current homeostatic plasticity parameters from UI."""
+        if hasattr(self.main_window, "homeostatic_plasticity_form_generator"):
+            return self.main_window.homeostatic_plasticity_form_generator.get_params_for_save()
+        return {}
+
     def _initialize_parameter_combinations(self) -> Dict:
         """Initialize validated parameter combinations for different experimental contexts."""
         return {
@@ -420,3 +426,8 @@ class HomeostaticPlasticityManager(QObject):
             )
 
         return "\n".join(code_lines)
+
+    def reset_to_defaults(self):
+        """Reset homeostatic plasticity to their default values."""
+        if hasattr(self.main_window, "homeostatic_plasticity_form_generator"):
+            self.main_window.homeostatic_plasticity_form_generator.reset_to_defaults()

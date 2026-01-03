@@ -66,6 +66,29 @@ class SynapseBuilder:
         """Build simple synapses."""
         # Support both old key names and new config key names
         weight = network_params.get("synaptic_weight", network_params.get("weight", 0.5)) * b2.nS
+        topology_type = network_params.get("network_topology", "random")
+
+        if topology_type == "coba_benchmark":
+            # Special logic for Vogels & Abbott Benchmark
+            # E (0-3200) -> ge (+6nS), I (3200-4000) -> gi (+67nS)
+            # Connectivity p=0.02
+            
+            # Using int(i<3200) to select Excitatory impact vs Inhibitory
+            # This implementation assumes standard 4000 neuron scaling
+            # For robustness, we could use N*0.8
+            
+            model = "w : siemens"
+            on_pre = """
+            ge_post += 6*nS * int(i < 3200)
+            gi_post += 67*nS * int(i >= 3200)
+            """
+            
+            synapses = b2.Synapses(neurons, neurons, model=model, on_pre=on_pre)
+            
+            # Use probability from params or fallback to 0.02 (2%)
+            prob = network_params.get("syn_prob", 0.02)
+            synapses.connect(p=prob)
+            return synapses
 
         # Determine if we need to support Reversal Potentials (Conductance Logic)
         use_reversals = advanced_params and ("exc_reversal" in advanced_params or "inh_reversal" in advanced_params)

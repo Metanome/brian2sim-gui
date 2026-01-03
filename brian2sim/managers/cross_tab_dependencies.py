@@ -60,7 +60,7 @@ class CrossTabDependencyManager(QObject):
             "homeostatic_plasticity_manager",
             "short_term_plasticity_manager",
             "gap_junctions_manager",
-            "network_options_manager",
+            "network_manager",
         ]
 
         for manager_name in managers:

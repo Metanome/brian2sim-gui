@@ -1,7 +1,7 @@
 from PyQt6.QtCore import QObject, pyqtSignal
 
 
-class NetworkOptionsManager(QObject):
+class NetworkManager(QObject):
     param_changed = pyqtSignal()  # Signal emitted when any parameter changes
 
     def __init__(self, main_window):
@@ -25,20 +25,20 @@ class NetworkOptionsManager(QObject):
         """Called when any network parameter changes"""
         self.param_changed.emit()
 
-    def get_network_options_config(self):
-        """Collects network configuration options from the UI elements using the config-driven approach."""
+    def get_config(self):
+        """Collects network configuration from the UI elements."""
         if not hasattr(self.main_window, "network_form_generator"):
-            return {"synapse_enabled": False}
+            return {"enabled": False}
 
         param_widgets = self.main_window.network_form_generator.get_param_widgets()
         enabled_checkbox = param_widgets.get("enabled")
 
         if not enabled_checkbox or not enabled_checkbox.isChecked():
-            return {"synapse_enabled": False}
+            return {"enabled": False}
 
         # Start with basic options
         options = {
-            "synapse_enabled": True,
+            "enabled": True,
         }
 
         # Get parameter values from form widgets
@@ -48,14 +48,14 @@ class NetworkOptionsManager(QObject):
         # Extract topology parameters
         if "network_topology" in params:
             topology_type = params["network_topology"]
-            options["topology_type"] = topology_type
+            options["network_topology"] = topology_type
 
             # Identify which parameters belong to the current topology
             topology_params = {}
             for key, value in params.items():
                 # Skip non-topology parameters
-                if key in ["enabled", "synaptic_weight", "network_topology"]:
-                    continue
+                if key in ["enabled", "synaptic_weight", "network_topology", "syn_prob"]:
+                     continue
 
                 # Add topology-specific parameters
                 topology_params[key] = value
@@ -65,7 +65,7 @@ class NetworkOptionsManager(QObject):
 
         return options
 
-    def load_network_options(self, data):
+    def load_config(self, data):
         """Loads network options into the UI elements."""
         if (
             not data
@@ -79,20 +79,27 @@ class NetworkOptionsManager(QObject):
 
         # Set synapse enabled state
         enabled_checkbox = param_widgets.get("enabled")
+        is_enabled = data.get("enabled", False)
+        
         if enabled_checkbox:
-            enabled_checkbox.setChecked(data.get("synapse_enabled", False))
+            enabled_checkbox.setChecked(is_enabled)
 
-        if not data.get("synapse_enabled", False):
+        if not is_enabled:
             return  # Don't load other options if synapses are disabled
 
         # Set basic parameters
         weight_input = param_widgets.get("synaptic_weight")
         if weight_input:
             weight_input.setValue(data.get("synaptic_weight", 1.0))
+            
+        prob_input = param_widgets.get("syn_prob")
+        if prob_input:
+            prob_input.setValue(data.get("syn_prob", 0.1))
 
         # Set topology type
         topology_combo = param_widgets.get("network_topology")
-        topology_type = data.get("topology_type")
+        topology_type = data.get("network_topology")
+        
         if topology_type and topology_combo:
             for i in range(topology_combo.count()):
                 if topology_combo.itemData(i) == topology_type:
@@ -120,12 +127,25 @@ class NetworkOptionsManager(QObject):
 
         # Apply synapse enable/disable
         enabled_checkbox = param_widgets.get("enabled")
-        if enabled_checkbox and "synapse_enabled" in preset_values:
-            enabled_checkbox.setChecked(preset_values["synapse_enabled"])
+        is_enabled = preset_values.get("enabled", None)
+        
+        if enabled_checkbox and is_enabled is not None:
+             enabled_checkbox.setChecked(is_enabled)
 
         if not enabled_checkbox or not enabled_checkbox.isChecked():
             return  # Don't apply other presets if disabled
-            # Apply all parameters that have matching widgets
+            
+        # Apply topology if present
+        topology_combo = param_widgets.get("network_topology")
+        topology_type = preset_values.get("network_topology")
+        
+        if topology_combo and topology_type:
+             for i in range(topology_combo.count()):
+                if topology_combo.itemData(i) == topology_type:
+                    topology_combo.setCurrentIndex(i)
+                    break
+            
+        # Apply all parameters that have matching widgets
         for param_key, value in preset_values.items():
             widget = param_widgets.get(param_key)
             if widget and hasattr(widget, "setValue"):
@@ -133,3 +153,11 @@ class NetworkOptionsManager(QObject):
                     widget.setValue(float(value))
                 except (ValueError, TypeError):
                     pass  # Skip if value can't be converted
+        
+        # Sync visibility - calls form generator's centralized method
+        self.main_window.network_form_generator.sync_params_visibility()
+
+    def reset_to_defaults(self):
+        """Reset network options to their default values."""
+        if hasattr(self.main_window, "network_form_generator"):
+            self.main_window.network_form_generator.reset_to_defaults()

@@ -36,6 +36,12 @@ class MulticompartmentManager(QObject):
         """Called when any multicompartment parameter changes"""
         self.param_changed.emit()
 
+    def get_parameters(self):
+        """Get current multicompartment parameters from UI."""
+        if hasattr(self.main_window, "multicompartment_form_generator"):
+            return self.main_window.multicompartment_form_generator.get_params_for_save()
+        return {}
+
     def _initialize_cell_type_parameters(self) -> Dict:
         """Initialize research-validated parameters for different cell types."""
         return {
@@ -764,3 +770,8 @@ class MulticompartmentManager(QObject):
         )
 
         return "\n".join(code_lines)
+
+    def reset_to_defaults(self):
+        """Reset multicompartment to their default values."""
+        if hasattr(self.main_window, "multicompartment_form_generator"):
+            self.main_window.multicompartment_form_generator.reset_to_defaults()

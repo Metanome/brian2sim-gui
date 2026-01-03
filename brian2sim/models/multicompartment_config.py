@@ -233,7 +233,7 @@ MULTICOMPARTMENT_CONFIG = {
     },
     # Coupling configuration
     "coupling_conductance": {
-        "type": "float",
+        "type": "double",
         "default": 1e-6,
         "min": 1e-9,
         "max": 1e-3,

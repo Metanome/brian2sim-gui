@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QTextEdit,
     QVBoxLayout,
+    QStyle,
 )
 
 
@@ -30,43 +31,103 @@ class MenuBarManager(QObject):
     def setup_menu_bar(self):
         """Setup the main menu bar."""
         menubar = self.main_window.menuBar()
+        style = self.main_window.style()
 
         # File menu
         file_menu = menubar.addMenu("File")
-        file_menu.addAction("New", self.new_simulation)
-        file_menu.addAction("Open...", self.main_window.load_configuration)
-        file_menu.addAction("Save...", self.main_window.save_configuration)
+        
+        new_action = file_menu.addAction("New", self.new_simulation)
+        new_action.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_FileIcon))
+        
+        open_action = file_menu.addAction("Open...", self.main_window.load_configuration)
+        open_action.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_DialogOpenButton))
+        
+        save_action = file_menu.addAction("Save...", self.main_window.save_configuration)
+        save_action.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_DialogSaveButton))
+        
         file_menu.addSeparator()
-        file_menu.addAction("Exit", self.main_window.close)
+        
+        exit_action = file_menu.addAction("Exit", self.main_window.close)
+        exit_action.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_TitleBarCloseButton))
 
         # Simulation menu
         simulation_menu = menubar.addMenu("Simulation")
-        simulation_menu.addAction("Run", self.run_simulation)
-        simulation_menu.addAction("Validate Parameters", self.show_validation_dialog)
-        simulation_menu.addAction("Generate Code", self.generate_code)
+        
+        run_action = simulation_menu.addAction("Run", self.run_simulation)
+        run_action.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_MediaPlay))
+        
+        val_action = simulation_menu.addAction("Validate Parameters", self.show_validation_dialog)
+        val_action.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_DialogApplyButton))
+        
+        gen_action = simulation_menu.addAction("Generate Code", self.generate_code)
+        gen_action.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_FileIcon)) # Fallback icon
 
-        # View menu
+        # View menu - checkable items for tab visibility
         view_menu = menubar.addMenu("View")
-
-        # User Level submenu - provides experience-based tab visibility
-        user_level_menu = view_menu.addMenu("User Level")
-        user_level_menu.addAction(
-            "Beginner (Core + Simulation)", lambda: self.set_user_level("beginner")
-        )
-        user_level_menu.addAction(
-            "Intermediate (+ Network + Synapses)", lambda: self.set_user_level("intermediate")
-        )
-        user_level_menu.addAction(
-            "Advanced (All Features)", lambda: self.set_user_level("advanced")
-        )
+        
+        # Store tab actions for updating checked state
+        self.tab_actions = {}
+        
+        # Define tabs with their display names (Core and Simulation always visible)
+        tab_items = [
+            ("core", "Core", True),  # (key, name, always_visible)
+            ("simulation", "Simulation", True),
+            ("network", "Network", False),
+            ("synapses", "Synapses", False),
+            ("plasticity", "Plasticity", False),
+            ("neuromodulation", "Neuromodulation", False),
+            ("multicompartment", "Multi-Compartment", False),
+        ]
+        
+        for tab_key, tab_name, always_visible in tab_items:
+            action = view_menu.addAction(tab_name)
+            action.setCheckable(True)
+            
+            if always_visible:
+                # Core and Simulation are always checked and disabled
+                action.setChecked(True)
+                action.setEnabled(False)
+                action.setToolTip(f"{tab_name} tab is always visible")
+            else:
+                # Initial state will be synced after tabs are created
+                action.setChecked(True)  # Default to checked, sync later
+                # Connect toggle action
+                action.triggered.connect(
+                    lambda checked, key=tab_key: self.toggle_tab_visibility(key, checked)
+                )
+            
+            self.tab_actions[tab_key] = action
 
         # Help menu
         help_menu = menubar.addMenu("Help")
-        help_menu.addAction("User Guide", self.show_user_guide)
-        help_menu.addAction("Parameter Reference", self.show_parameter_reference)
+        
+        doc_action = help_menu.addAction("Documentation", self.show_documentation)
+        doc_action.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_DialogHelpButton))
+        
         help_menu.addSeparator()
-        help_menu.addAction("About Brian2", self.show_about_brian2)
-        help_menu.addAction("About", self.show_about)
+        
+        about_action = help_menu.addAction("About", self.show_about)
+        about_action.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_MessageBoxInformation))
+
+    def sync_tab_checkboxes(self):
+        """Sync menu checkbox states with actual tab visibility.
+        
+        Call this after tabs have been created/initialized.
+        """
+        if not hasattr(self, "tab_actions"):
+            return
+        if not hasattr(self.main_window, "tab_info"):
+            return
+            
+        for tab_key, action in self.tab_actions.items():
+            if tab_key in ["core", "simulation"]:
+                # Essential tabs are always visible
+                action.setChecked(True)
+            elif tab_key in self.main_window.tab_info:
+                # Sync with actual tab visibility
+                tab_data = self.main_window.tab_info[tab_key]
+                is_visible = tab_data.get("visible", True)
+                action.setChecked(is_visible)
 
     def run_simulation(self):
         """Start the simulation."""
@@ -96,9 +157,9 @@ class MenuBarManager(QObject):
                 core_managers = [
                     "neuron_models_manager",
                     "sim_params_manager",
-                    "noise_options_manager",
+                    "noise_manager",
                     "input_patterns_manager",
-                    "network_options_manager",
+                    "network_manager",
                     "advanced_network_manager",
                 ]
                 for manager_name in core_managers:
@@ -287,242 +348,55 @@ class MenuBarManager(QObject):
                 self.config_export_requested.emit()
             except Exception as e:
                 QMessageBox.warning(
-                    self.main_window, "Export Error", f"Failed to export configuration:\n{str(e)}"
+                self.main_window, "Export Error", f"Failed to export configuration:\n{str(e)}"
                 )
 
     def generate_code(self):
         """Generate Brian2 simulation code."""
-        try:
-            # Generate code using the code generator
-            if hasattr(self.main_window, "code_generator"):
-                code = self.main_window.code_generator.generate_code(self.main_window)
-
-                # Show code in a dialog
-                dialog = QDialog(self.main_window)
-                dialog.setWindowTitle("Generated Brian2 Code")
-                dialog.setModal(True)
-                dialog.resize(800, 600)
-
-                layout = QVBoxLayout(dialog)
-
-                code_widget = QTextEdit()
-                code_widget.setPlainText(code)
-                code_widget.setFont(self.main_window.font())
-                layout.addWidget(code_widget)
-
-                # Buttons
-                button_layout = QHBoxLayout()
-                save_button = QPushButton("Save Code")
-                save_button.clicked.connect(lambda: self.save_generated_code(code))
-                copy_button = QPushButton("Copy to Clipboard")
-                copy_button.clicked.connect(lambda: self.copy_to_clipboard(code))
-                close_button = QPushButton("Close")
-                close_button.clicked.connect(dialog.accept)
-
-                button_layout.addWidget(save_button)
-                button_layout.addWidget(copy_button)
-                button_layout.addStretch()
-                button_layout.addWidget(close_button)
-                layout.addLayout(button_layout)
-
-                dialog.exec()
-            else:
-                QMessageBox.information(
-                    self.main_window, "Code Generation", "Code generator not available."
-                )
-        except Exception as e:
+        if hasattr(self.main_window, "simulation_manager"):
+            self.main_window.simulation_manager.generate_code()
+        else:
             QMessageBox.warning(
-                self.main_window, "Code Generation Error", f"Failed to generate code:\n{str(e)}"
+                self.main_window, "Error", "Simulation manager not available."
             )
 
-    def save_generated_code(self, code):
-        """Save generated code to a file."""
-        filename, _ = QFileDialog.getSaveFileName(
-            self.main_window,
-            "Save Generated Code",
-            "brian2_simulation.py",
-            "Python Files (*.py);;All Files (*)",
-        )
-
-        if filename:
-            try:
-                with open(filename, "w") as f:
-                    f.write(code)
-                QMessageBox.information(
-                    self.main_window, "Save Complete", f"Code saved to:\n{filename}"
-                )
-            except Exception as e:
-                QMessageBox.warning(
-                    self.main_window, "Save Error", f"Failed to save code:\n{str(e)}"
-                )
-
-    def copy_to_clipboard(self, text):
-        """Copy text to clipboard."""
-        from PyQt6.QtWidgets import QApplication
-
-        clipboard = QApplication.clipboard()
-        clipboard.setText(text)
-        QMessageBox.information(self.main_window, "Copied", "Code copied to clipboard!")
 
     def reset_to_defaults(self):
         """Reset all parameters to defaults."""
         self.new_simulation()  # Reuse the new simulation logic
 
-    def show_user_guide(self):
-        """Show user guide dialog."""
-        user_guide_text = """
-        <h2>Brian2Sim User Guide</h2>
-       
-        <h3>Getting Started</h3>
-        <p>1. <b>Main Tab:</b> Configure basic simulation parameters</p>
-        <p>2. <b>Network Architecture:</b> Set up network connectivity</p>
-        <p>3. <b>Synaptic Properties:</b> Configure synaptic transmission</p>
-        <p>4. <b>Plasticity & Dynamics:</b> Set up learning mechanisms</p>
-       
-        <h3>Parameter Dependencies</h3>
-        <p>• NMDA receptors automatically enable calcium dynamics</p>
-        <p>• Calcium dynamics enable plasticity mechanisms</p>
-        <p>• Some parameters are interdependent - validation will guide you</p>
-       
-        <h3>Tips</h3>
-        <p>• Use Tools → Validate Parameters to check your configuration</p>
-        <p>• Export configurations to save your work</p>
-        <p>• Generate code to see the underlying Brian2 implementation</p>
-        """
-        QMessageBox.about(self.main_window, "User Guide", user_guide_text)
-
-    def show_parameter_reference(self):
-        """Show parameter reference dialog."""
-        param_ref_text = """
-        <h2>Parameter Reference</h2>
-       
-        <h3>Neuron Models</h3>
-        <p><b>LIF:</b> Leaky Integrate-and-Fire</p>
-        <p><b>AdEx:</b> Adaptive Exponential</p>
-        <p><b>Izhikevich:</b> Two-variable model</p>
-        <p><b>Hodgkin-Huxley:</b> Detailed conductance-based</p>
-       
-        <h3>Typical Values</h3>
-        <p><b>Membrane potential:</b> -70 to -50 mV</p>
-        <p><b>Time constants:</b> 1-100 ms</p>
-        <p><b>Conductances:</b> 0.1-10 nS</p>
-        <p><b>Connection probability:</b> 0.01-0.5</p>
-       
-        <h3>Validation Rules</h3>
-        <p>• Voltages must be between -100 and +50 mV</p>
-        <p>• Time constants must be positive</p>
-        <p>• Probabilities must be between 0 and 1</p>
-        """
-        QMessageBox.about(self.main_window, "Parameter Reference", param_ref_text)
-
-    def show_shortcuts(self):
-        """Show keyboard shortcuts dialog."""
-        shortcuts_text = """
-        <h2>Keyboard Shortcuts</h2>
-       
-        <h3>File Operations</h3>
-        <p><b>Ctrl+N:</b> New Simulation</p>
-        <p><b>Ctrl+O:</b> Open Configuration</p>
-        <p><b>Ctrl+S:</b> Save Configuration</p>
-        <p><b>Ctrl+Q:</b> Quit Application</p>
-       
-        <h3>Tools</h3>
-        <p><b>F5:</b> Validate Parameters</p>
-        <p><b>Ctrl+G:</b> Generate Code</p>
-        <p><b>Ctrl+E:</b> Export Configuration</p>
-       
-        <h3>Navigation</h3>
-        <p><b>Ctrl+1-6:</b> Switch between tabs</p>
-        <p><b>F1:</b> Show Help</p>
-        """
-        QMessageBox.about(self.main_window, "Keyboard Shortcuts", shortcuts_text)
-
-    def show_about_brian2(self):
-        """Show information about Brian2."""
-        about_brian2_text = """
-        <h2>About Brian2</h2>
-        <p>Brian2 is a clock-driven simulator for spiking neural networks.</p>
-       
-        <p><b>Key Features:</b></p>
-        <ul>
-        <li>Flexible neuron and synapse models</li>
-        <li>Efficient simulation engine</li>
-        <li>Support for plasticity and learning</li>
-        <li>Extensive documentation and examples</li>
-        </ul>
-       
-        <p><b>Learn More:</b></p>
-        <p>Website: <a href="https://brian2.readthedocs.io">brian2.readthedocs.io</a></p>
-        <p>GitHub: <a href="https://github.com/brian-team/brian2">github.com/brian-team/brian2</a></p>
-        """
-        QMessageBox.about(self.main_window, "About Brian2", about_brian2_text)
+    def show_documentation(self):
+        """Show the documentation dialog."""
+        from brian2sim.ui.help_dialog import HelpDialog
+        dialog = HelpDialog(self.main_window)
+        dialog.exec()
 
     def show_about(self):
         """Show the About dialog."""
-        about_text = """
-        <h2>Brian2Sim GUI</h2>
-        <p><b>Version:</b> 1.0.0</p>
-        <p>A comprehensive graphical interface for Brian2 neural simulations.</p>
-       
-        <p><b>Key Features:</b></p>
-        <ul>
-        <li>Multiple neuron models (LIF, AdEx, Izhikevich, HH)</li>
-        <li>Flexible network connectivity options</li>
-        <li>Synaptic plasticity and dynamics</li>
-        <li>Neuromodulation and calcium dynamics</li>
-        <li>Real-time parameter validation</li>
-        <li>Cross-tab dependency management</li>
-        <li>Code generation and export</li>
-        </ul>
-       
-        <p><b>Built with:</b> PyQt6 and Brian2</p>
-        <p><b>License:</b> Open Source</p>
-       
-        <p>Designed for neuroscientists, researchers, and students.</p>
-        """
-        QMessageBox.about(self.main_window, "About Brian2Sim", about_text)
+        from brian2sim.ui.help_dialog import HelpDialog
+        dialog = HelpDialog(self.main_window, start_tab_index=1)
+        dialog.exec()
 
-    def set_user_level(self, level):
-        """Set the user level and update tab visibility."""
-        if hasattr(self.main_window, "set_user_level"):
-            self.main_window.set_user_level(level)
-            QMessageBox.information(
-                self.main_window,
-                "User Level Changed",
-                f"Interface switched to {level.title()} level.\n\n"
-                f"Tabs have been updated to show features appropriate for your experience level.",
-            )
 
-    def toggle_tab_visibility(self, tab_key):
-        """Toggle the visibility of a specific tab."""
+
+    def toggle_tab_visibility(self, tab_key, checked):
+        """Set the visibility of a specific tab based on checked state."""
         # Core and Simulation tabs should never be hidden - they're essential
         if tab_key in ["core", "simulation"]:
-            QMessageBox.information(
-                self.main_window,
-                "Cannot Hide Essential Tab",
-                f"{tab_key.title()} tab cannot be hidden as it contains essential functionality for neural simulations.",
-            )
             return
 
         if hasattr(self.main_window, "tab_info") and tab_key in self.main_window.tab_info:
             tab_data = self.main_window.tab_info[tab_key]
             current_index = self.main_window.tabs.indexOf(tab_data["widget"])
 
-            if current_index != -1:
-                # Tab is visible, hide it
-                self.main_window.tabs.removeTab(current_index)
-                tab_data["visible"] = False
-                status = "hidden"
-            else:
-                # Tab is hidden, show it
+            if checked and current_index == -1:
+                # Tab should be visible but isn't - show it
                 self.main_window._restore_tab(tab_key, tab_data)
                 tab_data["visible"] = True
-                status = "shown"
-
-            tab_name = tab_key.replace("_", " ").title()
-            QMessageBox.information(
-                self.main_window, "Tab Visibility Changed", f"{tab_name} tab has been {status}."
-            )
+            elif not checked and current_index != -1:
+                # Tab should be hidden but is visible - hide it
+                self.main_window.tabs.removeTab(current_index)
+                tab_data["visible"] = False
 
     def show_tab_info(self, tab_key):
         """Show information about essential tabs that cannot be hidden."""

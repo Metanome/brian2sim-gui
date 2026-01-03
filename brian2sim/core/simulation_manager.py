@@ -300,12 +300,12 @@ class SimulationManager(QObject):
         if hasattr(self.main_window, "neuron_models_manager"):
             params["neuron_model"] = self.main_window.neuron_models_manager.get_neuron_model()
 
-        if hasattr(self.main_window, "noise_options_manager"):
-            params["noise"] = self.main_window.noise_options_manager.get_noise_options()
+        if hasattr(self.main_window, "noise_manager"):
+            params["noise"] = self.main_window.noise_manager.get_config()
 
-        if hasattr(self.main_window, "network_options_manager"):
+        if hasattr(self.main_window, "network_manager"):
             params["network"] = (
-                self.main_window.network_options_manager.get_network_options_config()
+                self.main_window.network_manager.get_config()
             )
 
         if hasattr(self.main_window, "advanced_network_manager"):
@@ -317,48 +317,50 @@ class SimulationManager(QObject):
             params["input_patterns"] = self.main_window.input_patterns_manager.get_parameters()
 
         # Add gap junctions parameters
-        if hasattr(self.main_window, "gap_junctions_ui"):
-            params["gap_junctions"] = self.main_window.gap_junctions_ui.get_params_for_save()
+        # Add gap junctions parameters
+        if hasattr(self.main_window, "gap_junctions_manager"):
+            params["gap_junctions"] = self.main_window.gap_junctions_manager.get_parameters()
 
         # Add synaptic receptors parameters
-        if hasattr(self.main_window, "synaptic_receptors_ui"):
+        if hasattr(self.main_window, "synaptic_receptors_manager"):
             params["synaptic_receptors"] = (
-                self.main_window.synaptic_receptors_ui.get_params_for_save()
+                self.main_window.synaptic_receptors_manager.get_synaptic_receptors_config()
             )
         else:
             params["synaptic_receptors"] = {"enabled": False}
 
         # Add short-term plasticity parameters
-        if hasattr(self.main_window, "short_term_plasticity_ui"):
+        if hasattr(self.main_window, "short_term_plasticity_manager"):
             params["short_term_plasticity"] = (
-                self.main_window.short_term_plasticity_ui.get_params_for_save()
+                self.main_window.short_term_plasticity_manager.get_parameters()
             )
         else:
             params["short_term_plasticity"] = {"enabled": False}
 
         # Add calcium dynamics parameters
-        if hasattr(self.main_window, "calcium_dynamics_ui"):
-            params["calcium_dynamics"] = self.main_window.calcium_dynamics_ui.get_params_for_save()
+        if hasattr(self.main_window, "calcium_dynamics_manager"):
+            params["calcium_dynamics"] = self.main_window.calcium_dynamics_manager.get_parameters()
         else:
             params["calcium_dynamics"] = {"enabled": False}
 
         # Add homeostatic plasticity parameters
-        if hasattr(self.main_window, "homeostatic_plasticity_ui"):
+        if hasattr(self.main_window, "homeostatic_plasticity_manager"):
             params["homeostatic_plasticity"] = (
-                self.main_window.homeostatic_plasticity_ui.get_params_for_save()
+                self.main_window.homeostatic_plasticity_manager.get_parameters()
             )
         else:
             params["homeostatic_plasticity"] = {"enabled": False}
 
         # Add neuromodulation parameters
-        if hasattr(self.main_window, "neuromodulation_ui"):
-            params["neuromodulation"] = self.main_window.neuromodulation_ui.get_params_for_save()
+        if hasattr(self.main_window, "neuromodulation_manager"):
+            params["neuromodulation"] = self.main_window.neuromodulation_manager.get_parameters()
         else:
             params["neuromodulation"] = {"enabled": False}
 
         # Add multi-compartment parameters
-        if hasattr(self.main_window, "multicompartment_ui"):
-            params["multicompartment"] = self.main_window.multicompartment_ui.get_params_for_save()
+        if hasattr(self.main_window, "multicompartment_manager"):
+            params["multicompartment"] = self.main_window.multicompartment_manager.get_parameters()
+
         else:
             params["multicompartment"] = {"enabled": False}
             

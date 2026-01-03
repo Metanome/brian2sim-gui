@@ -34,10 +34,10 @@ def create_noise_options_group(main_window):
         for param_key, widget in param_widgets.items():
             if param_key != "enabled":  # Don't connect the main enable checkbox
                 if hasattr(widget, "valueChanged"):
-                    widget.valueChanged.connect(main_window.noise_options_manager.on_param_changed)
+                    widget.valueChanged.connect(main_window.noise_manager.on_param_changed)
                 elif hasattr(widget, "currentIndexChanged"):
                     widget.currentIndexChanged.connect(
-                        main_window.noise_options_manager.on_param_changed
+                        main_window.noise_manager.on_param_changed
                     )
 
     return noise_options_group

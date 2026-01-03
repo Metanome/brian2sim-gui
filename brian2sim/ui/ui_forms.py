@@ -400,6 +400,44 @@ class BaseFormGenerator(QWidget):
             return next(iter(self.preset_combos.values())) if self.preset_combos else None
         return self.preset_combos.get(key)
 
+    def reset_to_defaults(self, key=None):
+        """Reset all parameters to their default values from config."""
+        param_widgets_to_reset = self.get_param_widgets(key)
+        
+        # Get the correct config section
+        if key and key in self.config:
+            current_config = self.config[key]
+        else:
+            current_config = self.config
+        
+        for param_key, widget in param_widgets_to_reset.items():
+            param_config = current_config.get(param_key, {})
+            if not isinstance(param_config, dict):
+                continue
+                
+            default_value = param_config.get("default")
+            if default_value is None:
+                continue
+                
+            if isinstance(widget, QDoubleSpinBox):
+                widget.setValue(float(default_value))
+            elif isinstance(widget, QSpinBox):
+                widget.setValue(int(default_value))
+            elif isinstance(widget, QCheckBox):
+                widget.setChecked(bool(default_value))
+            elif isinstance(widget, QComboBox):
+                index = widget.findData(default_value)
+                if index != -1:
+                    widget.setCurrentIndex(index)
+                else:
+                    index = widget.findText(str(default_value))
+                    if index != -1:
+                        widget.setCurrentIndex(index)
+            elif isinstance(widget, QLineEdit):
+                widget.setText(str(default_value))
+            elif isinstance(widget, QTextEdit):
+                widget.setPlainText(str(default_value))
+
     def load_params_from_config(self, config_data, key=None):
         param_widgets_to_load = self.get_param_widgets(key)
         for param_key, widget in param_widgets_to_load.items():
@@ -425,6 +463,25 @@ class BaseFormGenerator(QWidget):
                     widget.setText(str(value))
                 elif isinstance(widget, FilePickerWidget):
                     widget.setText(str(value))
+        
+        # Auto-sync visibility after loading params
+        self.sync_params_visibility()
+
+    def sync_params_visibility(self):
+        """Sync params_group_widget visibility with enable checkbox state.
+        
+        Called automatically after load_params_from_config. This ensures visibility
+        is updated even if the toggled signal doesn't fire (e.g., when checkbox
+        state doesn't actually change).
+        """
+        if not hasattr(self, "params_group_widget"):
+            return
+            
+        param_widgets = self.get_param_widgets()
+        enabled_checkbox = param_widgets.get("enabled")
+        
+        if enabled_checkbox and isinstance(enabled_checkbox, QCheckBox):
+            self.params_group_widget.setVisible(enabled_checkbox.isChecked())
 
     def get_params_for_save(self, key=None):
         param_widgets_to_save = self.get_param_widgets(key)
@@ -584,11 +641,7 @@ class NoiseOptionsFormGenerator(BaseFormGenerator):
 
                 param_widgets["enabled"] = enable_checkbox
 
-                enable_checkbox.stateChanged.connect(
-                    lambda state, wg=self.params_group_widget: wg.setVisible(
-                        state == Qt.CheckState.Checked.value
-                    )
-                )
+                enable_checkbox.toggled.connect(self.params_group_widget.setVisible)
                 # Set initial state of the group widget
                 self.params_group_widget.setVisible(enable_checkbox.isChecked())
         else:
@@ -681,11 +734,7 @@ class NetworkOptionsFormGenerator(BaseFormGenerator):
                 section_layout.addLayout(enable_layout)
 
                 param_widgets["enabled"] = enable_checkbox
-                enable_checkbox.stateChanged.connect(
-                    lambda state, wg=self.params_group_widget: wg.setVisible(
-                        state == Qt.CheckState.Checked.value
-                    )
-                )
+                enable_checkbox.toggled.connect(self.params_group_widget.setVisible)
                 # Set initial state of the group widget
                 self.params_group_widget.setVisible(enable_checkbox.isChecked())
         else:
@@ -760,11 +809,7 @@ class AdvancedNetworkFormGenerator(BaseFormGenerator):
 
                     section_param_widgets["enabled"] = section_enable_checkbox
 
-                    section_enable_checkbox.stateChanged.connect(
-                        lambda state, wg=params_group_widget: wg.setVisible(
-                            state == Qt.CheckState.Checked.value
-                        )
-                    )
+                    section_enable_checkbox.toggled.connect(params_group_widget.setVisible)
                     params_group_widget.setVisible(section_enable_checkbox.isChecked())
             else:
                 params_group_widget.setVisible(True)
@@ -1108,3 +1153,22 @@ class InputPatternsFormGenerator(BaseFormGenerator):
         self.param_widgets["main"] = param_widgets  # This should be a dictionary with form key
 
         return section_widget
+
+    def reset_to_defaults(self):
+        """Reset all input pattern parameters to their default values."""
+        if "main" not in self.param_widgets:
+            return
+            
+        for param_key, widget in self.param_widgets["main"].items():
+            param_config = self.config.get(param_key, {})
+            default_value = param_config.get("default")
+            
+            if default_value is not None:
+                if hasattr(widget, "setValue"):  # QSpinBox, QDoubleSpinBox
+                    widget.setValue(default_value)
+                elif hasattr(widget, "setChecked"):  # QCheckBox
+                    widget.setChecked(bool(default_value))
+                elif hasattr(widget, "setCurrentText"):  # QComboBox
+                    widget.setCurrentText(str(default_value))
+                elif hasattr(widget, "setText"):  # QLineEdit
+                    widget.setText(str(default_value))

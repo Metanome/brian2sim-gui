@@ -41,6 +41,12 @@ class GapJunctionsManager(QObject):
             defaults[key] = config.get("default")
         return defaults
 
+    def get_parameters(self):
+        """Get current gap junctions parameters from UI."""
+        if hasattr(self.main_window, "gap_junctions_form_generator"):
+            return self.main_window.gap_junctions_form_generator.get_params_for_save()
+        return self.get_default_parameters()
+
     def validate_parameters(self, params):
         """Validate gap junctions parameters."""
         validated = {}
@@ -344,3 +350,8 @@ class GapJunctionsManager(QObject):
             suggestions.append("Neuromodulation enabled - track modulator effects on coupling")
 
         return suggestions
+
+    def reset_to_defaults(self):
+        """Reset gap junctions to their default values."""
+        if hasattr(self.main_window, "gap_junctions_form_generator"):
+            self.main_window.gap_junctions_form_generator.reset_to_defaults()

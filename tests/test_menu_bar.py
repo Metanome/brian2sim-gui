@@ -188,12 +188,40 @@ class TestMenuBarManager:
             mock_main_window.set_user_level.assert_called_once_with("advanced")
 
     def test_toggle_tab_visibility_essential_tabs(self, menu_bar_manager, mock_main_window):
-        """Test that essential tabs cannot be hidden."""
-        with patch('brian2sim.ui.menu_bar.QMessageBox') as mock_msgbox:
-            menu_bar_manager.toggle_tab_visibility("core")
-            
-            # Should show information that it can't be hidden
-            mock_msgbox.information.assert_called()
+        """Test that essential tabs are silently ignored when trying to toggle."""
+        # Core and simulation tabs should just return without doing anything
+        menu_bar_manager.toggle_tab_visibility("core", False)
+        menu_bar_manager.toggle_tab_visibility("simulation", False)
+        # No error raised, no action taken - test passes
+
+    def test_toggle_tab_visibility_shows_tab(self, menu_bar_manager, mock_main_window):
+        """Test that toggle_tab_visibility shows a hidden tab when checked=True."""
+        # Setup mock tab_info
+        mock_widget = Mock()
+        mock_main_window.tab_info = {
+            "network": {"widget": mock_widget, "visible": False, "title": "Network"}
+        }
+        mock_main_window.tabs.indexOf.return_value = -1  # Tab is hidden
+        mock_main_window._restore_tab = Mock()
+        
+        menu_bar_manager.toggle_tab_visibility("network", True)
+        
+        # Verify tab was restored
+        mock_main_window._restore_tab.assert_called_once()
+
+    def test_toggle_tab_visibility_hides_tab(self, menu_bar_manager, mock_main_window):
+        """Test that toggle_tab_visibility hides a visible tab when checked=False."""
+        # Setup mock tab_info  
+        mock_widget = Mock()
+        mock_main_window.tab_info = {
+            "network": {"widget": mock_widget, "visible": True, "title": "Network"}
+        }
+        mock_main_window.tabs.indexOf.return_value = 2  # Tab is visible at index 2
+        
+        menu_bar_manager.toggle_tab_visibility("network", False)
+        
+        # Verify tab was removed
+        mock_main_window.tabs.removeTab.assert_called_once_with(2)
 
     def test_copy_to_clipboard(self, menu_bar_manager, mock_main_window):
         """Test copy_to_clipboard function."""
